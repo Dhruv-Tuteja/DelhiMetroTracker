@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardElevation="2dp"
+    app:cardCornerRadius="12dp"
+    app:cardBackgroundColor="@color/background_card"
+    app:strokeWidth="0dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Line Color Indicator Strip -->
+        <View
+            android:id="@+id/viewLineIndicator"
+            android:layout_width="4dp"
+            android:layout_height="0dp"
+            android:background="@color/accent_blue"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <!-- Source → Destination in one line -->
+        <TextView
+            android:id="@+id/tvSource"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Dwarka Sector 21 → Rajiv Chowk"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:ellipsize="end"
+            android:maxLines="1"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toEndOf="@id/viewLineIndicator"
+            app:layout_constraintEnd_toStartOf="@id/tvDuration"
+            tools:ignore="HardcodedText" />
+
+        <!-- Duration -->
+        <TextView
+            android:id="@+id/tvDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="45m"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_blue"
+            android:layout_marginStart="8dp"
+            app:layout_constraintTop_toTopOf="@id/tvSource"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:ignore="HardcodedText" />
+
+        <!-- Station Count -->
+        <TextView
+            android:id="@+id/tvStationCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="12 stations"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="6dp"
+            app:layout_constraintTop_toBottomOf="@id/tvSource"
+            app:layout_constraintStart_toEndOf="@id/viewLineIndicator"
+            tools:ignore="HardcodedText" />
+
+        <!-- Date/Time -->
+        <TextView
+            android:id="@+id/tvDateTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="6dp"
+            android:text="Jan 25, 09:30 AM"
+            android:textColor="@color/text_tertiary"
+            android:textSize="11sp"
+            app:layout_constraintTop_toBottomOf="@id/tvStationCount"
+            app:layout_constraintStart_toEndOf="@id/viewLineIndicator"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:ignore="HardcodedText" />
+
+        <!-- Delay Badge -->
+        <TextView
+            android:id="@+id/tvDelayBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="+8m delay"
+            android:textSize="10sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/badge_delay"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:layout_marginStart="8dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="@id/tvDateTime"
+            app:layout_constraintBottom_toBottomOf="@id/tvDateTime"
+            app:layout_constraintStart_toEndOf="@id/tvDateTime"
+            tools:visibility="visible"
+            tools:ignore="HardcodedText" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

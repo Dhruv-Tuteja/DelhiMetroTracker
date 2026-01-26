@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This drawable is OPTIONAL since we create nodes programmatically -->
+<!-- But keeping it here for reference or fallback purposes -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Visited State (Enabled) -->
+    <item android:state_enabled="true">
+        <shape android:shape="oval">
+            <solid android:color="#64B5F6"/>
+            <size android:width="16dp" android:height="16dp"/>
+        </shape>
+    </item>
+
+    <!-- Unvisited State (Disabled) -->
+    <item android:state_enabled="false">
+        <shape android:shape="oval">
+            <solid android:color="#2A3555"/>
+            <stroke android:width="2dp" android:color="#4A5575"/>
+            <size android:width="16dp" android:height="16dp"/>
+        </shape>
+    </item>
+
+    <!-- Default State -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#2A3555"/>
+            <stroke android:width="2dp" android:color="#4A5575"/>
+            <size android:width="16dp" android:height="16dp"/>
+        </shape>
+    </item>
+
+</selector>
