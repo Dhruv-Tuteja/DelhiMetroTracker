@@ -27,6 +27,3 @@ To build and run this project, you'll need:
 
 Clone the repository and open it in Android Studio. The project should sync and build automatically.
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
