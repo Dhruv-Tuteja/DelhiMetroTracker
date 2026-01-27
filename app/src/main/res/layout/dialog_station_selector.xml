@@ -36,44 +36,36 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:padding="16dp">
 
+            <!-- Single Card for All Journey Details -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
+                android:layout_marginBottom="12dp"
                 app:cardElevation="2dp"
                 app:cardBackgroundColor="#2C2C2C"
-                app:cardCornerRadius="16dp">
+                app:cardCornerRadius="12dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="FROM"
-                        android:textSize="11sp"
-                        android:textColor="#90A4AE"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.1"
-                        android:layout_marginBottom="8dp"/>
-
+                    <!-- FROM Station -->
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="24dp"
+                        android:layout_marginBottom="12dp"
                         android:hint="Starting Station"
                         app:boxBackgroundColor="#1E1E1E"
                         app:boxStrokeColor="#64B5F6"
-                        app:boxCornerRadiusTopStart="12dp"
-                        app:boxCornerRadiusTopEnd="12dp"
-                        app:boxCornerRadiusBottomStart="12dp"
-                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp"
                         app:hintTextColor="#64B5F6"
                         app:startIconDrawable="@android:drawable/ic_menu_mylocation"
                         app:startIconTint="#64B5F6">
@@ -83,32 +75,33 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="text"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textColor="#FFFFFF" />
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <!-- Swap Button with Lines -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center"
-                        android:layout_marginBottom="24dp">
+                        android:layout_marginVertical="8dp">
 
                         <View
                             android:layout_width="0dp"
-                            android:layout_height="2dp"
+                            android:layout_height="1dp"
                             android:layout_weight="1"
                             android:background="#424242"/>
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnSwapStations"
                             style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:layout_margin="4dp"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginHorizontal="8dp"
                             app:icon="@drawable/ic_swap_stations"
                             app:iconTint="#64B5F6"
-                            app:iconSize="28dp"
+                            app:iconSize="24dp"
                             app:iconGravity="textStart"
                             android:padding="0dp"
                             android:insetLeft="0dp"
@@ -119,32 +112,24 @@
 
                         <View
                             android:layout_width="0dp"
-                            android:layout_height="2dp"
+                            android:layout_height="1dp"
                             android:layout_weight="1"
                             android:background="#424242"/>
                     </LinearLayout>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="TO"
-                        android:textSize="11sp"
-                        android:textColor="#90A4AE"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.1"
-                        android:layout_marginBottom="8dp"/>
-
+                    <!-- TO Station -->
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
                         android:hint="Destination Station"
                         app:boxBackgroundColor="#1E1E1E"
                         app:boxStrokeColor="#64B5F6"
-                        app:boxCornerRadiusTopStart="12dp"
-                        app:boxCornerRadiusTopEnd="12dp"
-                        app:boxCornerRadiusBottomStart="12dp"
-                        app:boxCornerRadiusBottomEnd="12dp"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp"
                         app:hintTextColor="#64B5F6"
                         app:startIconDrawable="@android:drawable/ic_menu_compass"
                         app:startIconTint="#64B5F6">
@@ -154,34 +139,77 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="text"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textColor="#FFFFFF" />
                     </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                app:cardElevation="2dp"
-                app:cardBackgroundColor="#2C2C2C"
-                app:cardCornerRadius="16dp">
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#424242"
+                        android:layout_marginVertical="12dp"/>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+                    <!-- Route Preference (Horizontal) -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ROUTE PREFERENCE"
+                        android:textSize="10sp"
+                        android:textColor="#90A4AE"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1"
+                        android:layout_marginBottom="8dp"/>
 
+                    <RadioGroup
+                        android:id="@+id/routePreferenceGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <com.google.android.material.radiobutton.MaterialRadioButton
+                            android:id="@+id/rbShortestPath"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Shortest Path"
+                            android:textColor="#FFFFFF"
+                            android:textSize="13sp"
+                            android:checked="true"
+                            android:minHeight="36dp"
+                            app:buttonTint="#64B5F6"/>
+
+                        <com.google.android.material.radiobutton.MaterialRadioButton
+                            android:id="@+id/rbLeastInterchanges"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Least Interchanges"
+                            android:textColor="#FFFFFF"
+                            android:textSize="13sp"
+                            android:minHeight="36dp"
+                            app:buttonTint="#64B5F6"/>
+                    </RadioGroup>
+
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="#424242"
+                        android:layout_marginVertical="12dp"/>
+
+                    <!-- SMS Section -->
                     <com.google.android.material.checkbox.MaterialCheckBox
                         android:id="@+id/cbEnableSms"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Enable SMS Alerts"
                         android:textColor="#FFFFFF"
+                        android:textSize="13sp"
                         android:checked="true"
-                        android:layout_marginBottom="16dp"
+                        android:minHeight="36dp"
+                        android:layout_marginBottom="8dp"
                         app:buttonTint="#FFA726"/>
 
                     <LinearLayout
@@ -208,7 +236,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:inputType="phone"
-                                android:textSize="16sp"
+                                android:textSize="14sp"
                                 android:textColor="#FFFFFF"
                                 android:maxLength="10"/>
                         </com.google.android.material.textfield.TextInputLayout>
@@ -216,13 +244,13 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnPickContact"
                             style="@style/Widget.MaterialComponents.Button.Icon"
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
                             android:layout_marginStart="8dp"
                             android:padding="0dp"
                             app:icon="@android:drawable/ic_menu_search"
                             app:iconTint="#FFA726"
-                            app:iconSize="24dp"
+                            app:iconSize="20dp"
                             app:iconGravity="textStart"
                             android:insetLeft="0dp"
                             android:insetTop="0dp"
@@ -232,32 +260,37 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Action Buttons (Equal Height) -->
+            <!-- Action Buttons (Equal Height) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="8dp">
+                android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnCancel"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="0dp"
-                    android:layout_height="60dp"
+                    android:layout_height="52dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="8dp"
                     android:text="Cancel"
                     android:textColor="#FFFFFF"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
                     app:strokeColor="#64B5F6"
                     app:cornerRadius="12dp"/>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnStart"
                     android:layout_width="0dp"
-                    android:layout_height="60dp"
+                    android:layout_height="52dp"
                     android:layout_weight="1"
                     android:layout_marginStart="8dp"
                     android:text="START"
                     android:textColor="#FFFFFF"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
                     app:backgroundTint="#64B5F6"
                     app:cornerRadius="12dp"/>
             </LinearLayout>

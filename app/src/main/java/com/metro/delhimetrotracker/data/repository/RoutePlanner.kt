@@ -7,7 +7,13 @@ import com.metro.delhimetrotracker.data.local.database.entities.TripStatus
 import kotlinx.coroutines.flow.first
 import java.util.*
 
+
 class RoutePlanner(private val database: AppDatabase) {
+
+    enum class RoutePreference {
+        SHORTEST_PATH,
+        LEAST_INTERCHANGES
+    }
 
     // Models for internal routing
     data class Node(val stationId: String, val distance: Int) : Comparable<Node> {
@@ -29,9 +35,13 @@ class RoutePlanner(private val database: AppDatabase) {
     /**
      * Core Dijkstra Implementation
      */
-    suspend fun findRoute(sourceId: String, destId: String): CompleteRoute? {
+    suspend fun findRoute(
+        sourceId: String,
+        destId: String,
+        preference: RoutePreference = RoutePreference.SHORTEST_PATH
+    ): CompleteRoute? {
         val allStations = database.metroStationDao().getAllStations().first()
-        val graph = buildGraph(allStations)
+        val graph = buildGraph(allStations, preference)
 
         val distances = mutableMapOf<String, Int>().withDefault { Int.MAX_VALUE }
         val previous = mutableMapOf<String, String?>()
@@ -62,8 +72,18 @@ class RoutePlanner(private val database: AppDatabase) {
     /**
      * Builds an adjacency list with transfer penalties
      */
-    private fun buildGraph(allStations: List<MetroStation>): Map<String, List<Pair<String, Int>>> {
+    private fun buildGraph(
+        allStations: List<MetroStation>,
+        preference: RoutePreference
+    ): Map<String, List<Pair<String, Int>>> {
         val adjacencyList = mutableMapOf<String, MutableList<Pair<String, Int>>>()
+
+        // Weights based on preference
+        val stationWeight = 1
+        val interchangeWeight = when (preference) {
+            RoutePreference.SHORTEST_PATH -> 5      // Small penalty for interchanges
+            RoutePreference.LEAST_INTERCHANGES -> 50 // Heavy penalty to avoid interchanges
+        }
 
         // 1. Link stations on the same line
         allStations.groupBy { it.metroLine }.forEach { (_, lineStations) ->
@@ -71,18 +91,17 @@ class RoutePlanner(private val database: AppDatabase) {
             for (i in 0 until sorted.size - 1) {
                 val u = sorted[i].stationId
                 val v = sorted[i + 1].stationId
-                // Weight of 1 represents travel between stations
-                adjacencyList.getOrPut(u) { mutableListOf() }.add(v to 1)
-                adjacencyList.getOrPut(v) { mutableListOf() }.add(u to 1)
+                adjacencyList.getOrPut(u) { mutableListOf() }.add(v to stationWeight)
+                adjacencyList.getOrPut(v) { mutableListOf() }.add(u to stationWeight)
             }
         }
 
-        // 2. Link physical interchange points (different IDs, same Name)
+        // 2. Link interchange points with preference-based weight
         allStations.filter { it.isInterchange }.forEach { station ->
             allStations.filter { it.stationName == station.stationName && it.stationId != station.stationId }
                 .forEach { other ->
-                    // Weight of 5 represents an "interchange penalty" (walking time)
-                    adjacencyList.getOrPut(station.stationId) { mutableListOf() }.add(other.stationId to 5)
+                    adjacencyList.getOrPut(station.stationId) { mutableListOf() }
+                        .add(other.stationId to interchangeWeight)
                 }
         }
         return adjacencyList
@@ -96,42 +115,56 @@ class RoutePlanner(private val database: AppDatabase) {
     ): CompleteRoute? {
         val pathIds = mutableListOf<String>()
         var curr: String? = destId
+
+        // Build path backwards from destination to source
         while (curr != null) {
             pathIds.add(0, curr)
+            if (curr == sourceId) break  // Stop when we reach source (it's already added)
             curr = previous[curr]
-            if (curr == sourceId) {
-                pathIds.add(0, sourceId)
-                break
-            }
         }
 
+        // Verify we have a valid path
         if (pathIds.isEmpty() || pathIds.first() != sourceId) return null
 
+        // Get actual station objects
         val pathStations = pathIds.mapNotNull { id -> allStations.find { it.stationId == id } }
+        // Remove consecutive duplicate station names (for interchanges)
+        val deduplicatedStations = pathStations.filterIndexed { index, station ->
+            index == 0 || station.stationName != pathStations[index - 1].stationName
+        }
         val segments = mutableListOf<RouteSegment>()
 
-        // Group stations into segments whenever the line changes
-        if (pathStations.isNotEmpty()) {
+        // Group stations into segments by line
+        if (deduplicatedStations.isNotEmpty()) {
             var currentLineStations = mutableListOf<MetroStation>()
-            var currentLine = pathStations.first().metroLine
-            var currentColor = pathStations.first().lineColor
+            var currentLine = deduplicatedStations.first().metroLine
+            var currentColor = deduplicatedStations.first().lineColor
 
-            pathStations.forEach { station ->
+            deduplicatedStations.forEach { station ->
                 if (station.metroLine != currentLine) {
-                    segments.add(RouteSegment(currentLine, currentLineStations, currentColor))
-                    currentLineStations = mutableListOf()
+                    // Save current segment before starting new one
+                    if (currentLineStations.isNotEmpty()) {
+                        segments.add(RouteSegment(currentLine, currentLineStations.toList(), currentColor))
+                    }
+                    // Start new segment (station goes to NEW segment only)
+                    currentLineStations = mutableListOf(station)
                     currentLine = station.metroLine
                     currentColor = station.lineColor
+                } else {
+                    currentLineStations.add(station)
                 }
-                currentLineStations.add(station)
             }
-            segments.add(RouteSegment(currentLine, currentLineStations, currentColor))
+
+            // Add final segment
+            if (currentLineStations.isNotEmpty()) {
+                segments.add(RouteSegment(currentLine, currentLineStations.toList(), currentColor))
+            }
         }
 
         return CompleteRoute(
             segments = segments,
-            totalStations = pathStations.size,
-            estimatedDuration = (pathStations.size * 2) + (segments.size * 5)
+            totalStations = deduplicatedStations.size,
+            estimatedDuration = (deduplicatedStations.size * 2) + (segments.size * 5)
         )
     }
 }

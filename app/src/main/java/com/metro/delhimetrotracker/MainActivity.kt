@@ -38,6 +38,8 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
+import android.widget.RadioGroup
+import com.metro.delhimetrotracker.data.repository.RoutePlanner
 
 class MainActivity : AppCompatActivity() {
 
@@ -260,6 +262,8 @@ class MainActivity : AppCompatActivity() {
             // Optional: Add a small rotation animation to show feedback
             btnSwap.animate().rotationBy(180f).setDuration(300).start()
         }
+        // Get RadioGroup reference
+        val routePreferenceGroup = dialog.findViewById<RadioGroup>(R.id.routePreferenceGroup)
 
         currentDialogPhoneField = phoneEt
         phoneEt.setText(prefs.getString("last_phone", ""))
@@ -323,7 +327,12 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     dialog.dismiss()
-                    createNewTripAndStartService(source, dest, phone)
+                    // Get selected route preference
+                    val selectedPreference = when (routePreferenceGroup.checkedRadioButtonId) {
+                        R.id.rbLeastInterchanges -> RoutePlanner.RoutePreference.LEAST_INTERCHANGES
+                        else -> RoutePlanner.RoutePreference.SHORTEST_PATH
+                    }
+                    createNewTripAndStartService(source, dest, phone, selectedPreference)
                 }
 
                 dialog.show()
@@ -331,7 +340,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun createNewTripAndStartService(sourceName: String, destName: String, phone: String) {
+    private fun createNewTripAndStartService(
+        sourceName: String,
+        destName: String,
+        phone: String,
+        routePreference: RoutePlanner.RoutePreference = RoutePlanner.RoutePreference.SHORTEST_PATH
+    ) {
         lifecycleScope.launch(Dispatchers.IO) {
             val db = (application as MetroTrackerApplication).database
             val sourceStation = db.metroStationDao().searchStations(sourceName).first().firstOrNull()
@@ -357,12 +371,14 @@ class MainActivity : AppCompatActivity() {
                     val serviceIntent = Intent(this@MainActivity, JourneyTrackingService::class.java).apply {
                         action = JourneyTrackingService.ACTION_START_JOURNEY
                         putExtra(JourneyTrackingService.EXTRA_TRIP_ID, tripId)
+                        putExtra("ROUTE_PREFERENCE", routePreference.name) // Pass preference to service
                     }
                     ContextCompat.startForegroundService(this@MainActivity, serviceIntent)
 
                     // 2. Navigate to tracking screen
                     val trackingIntent = Intent(this@MainActivity, TrackingActivity::class.java).apply {
                         putExtra("EXTRA_TRIP_ID", tripId)
+                        putExtra("ROUTE_PREFERENCE", routePreference.name) // Pass to tracking activity
                     }
                     startActivity(trackingIntent)
                 }

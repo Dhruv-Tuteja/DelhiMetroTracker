@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import android.view.KeyEvent
 import kotlinx.coroutines.delay
+import com.metro.delhimetrotracker.data.repository.RoutePlanner
 
 class TrackingActivity : AppCompatActivity() {
 
@@ -62,6 +63,7 @@ class TrackingActivity : AppCompatActivity() {
     private var emergencyContact: String = ""
     private var currentTripId: Long = -1L
 
+    private var routePreference: RoutePlanner.RoutePreference = RoutePlanner.RoutePreference.SHORTEST_PATH
     private var sosTimer: CountDownTimer? = null
     private var flashAnimator: ObjectAnimator? = null
 
@@ -121,6 +123,13 @@ class TrackingActivity : AppCompatActivity() {
         rvPath.layoutManager = LinearLayoutManager(this)
         val tripId = intent.getLongExtra("EXTRA_TRIP_ID", -1L)
         currentTripId = tripId
+        // Get route preference from intent
+        val preferenceString = intent.getStringExtra("ROUTE_PREFERENCE")
+        routePreference = try {
+            RoutePlanner.RoutePreference.valueOf(preferenceString ?: "SHORTEST_PATH")
+        } catch (e: Exception) {
+            RoutePlanner.RoutePreference.SHORTEST_PATH
+        }
         val db = (application as MetroTrackerApplication).database
 
         val btnStop = findViewById<Button>(R.id.btnStopJourney)
@@ -142,22 +151,14 @@ class TrackingActivity : AppCompatActivity() {
                 trip?.let { activeTrip ->
                     // Store emergency contact
                     emergencyContact = activeTrip.emergencyContact
-
-                    val journeyPath = MetroNavigator.findShortestPath(
-                        db.metroStationDao(),
+                    val routePlanner = RoutePlanner(db)
+                    val route = routePlanner.findRoute(
                         activeTrip.sourceStationId,
-                        activeTrip.destinationStationId
+                        activeTrip.destinationStationId,
+                        routePreference
                     )
-
+                    val journeyPath = route?.segments?.flatMap { it.stations } ?: emptyList()
                     currentJourneyPath = journeyPath
-
-                    if (currentJourneyPath.isEmpty()) {
-                        currentJourneyPath = MetroNavigator.findShortestPath(
-                            db.metroStationDao(),
-                            activeTrip.sourceStationId,
-                            activeTrip.destinationStationId
-                        )
-                    }
 
                     visitedStationIds = activeTrip.visitedStations
 
@@ -166,13 +167,13 @@ class TrackingActivity : AppCompatActivity() {
                         rvPath.adapter = adapter
                     }
 
-                    val nextStation = journeyPath.find { it.stationId == (activeTrip.visitedStations.lastOrNull()) }
+                    val nextStation = currentJourneyPath.find { it.stationId == (activeTrip.visitedStations.lastOrNull()) }
                     findViewById<TextView>(R.id.tvCurrentStation).text = nextStation?.stationName ?: activeTrip.sourceStationName
 
-                    if (journeyPath.isNotEmpty()) {
-                        val totalStations = journeyPath.size
+                    if (currentJourneyPath.isNotEmpty()) {
+                        val totalStations = currentJourneyPath.size
 
-                        val currentStationIndex = journeyPath.indexOfLast { station ->
+                        val currentStationIndex = currentJourneyPath.indexOfLast { station ->
                             activeTrip.visitedStations.contains(station.stationId)
                         }.coerceAtLeast(0)
                         val stationsLeft = totalStations - (currentStationIndex + 1)
@@ -194,11 +195,11 @@ class TrackingActivity : AppCompatActivity() {
                         progressIndicator.setProgress(progress.toInt(), true)
                     }
 
-                    adapter.submitData(journeyPath, activeTrip.visitedStations)
+                    adapter.submitData(currentJourneyPath, activeTrip.visitedStations)
 
                     val currentId = activeTrip.visitedStations.lastOrNull()
                     if (currentId != null && activeTrip.visitedStations.size > 1) {
-                        val penultimateId = if (journeyPath.size >= 2) journeyPath[journeyPath.size - 2].stationId else null
+                        val penultimateId = if (currentJourneyPath.size >= 2) currentJourneyPath[currentJourneyPath.size - 2].stationId else null
                         if (currentId == activeTrip.destinationStationId || currentId == penultimateId) {
                             triggerTripleVibration()
                         }

@@ -29,6 +29,7 @@ import com.metro.delhimetrotracker.ui.TrackingActivity
 import com.metro.delhimetrotracker.data.model.TripCardData
 import android.widget.Toast
 import android.Manifest
+import com.metro.delhimetrotracker.data.repository.RoutePlanner
 
 /**
  * Production Foreground service for Delhi Metro Tracking.
@@ -51,6 +52,8 @@ class JourneyTrackingService : LifecycleService() {
 
     private var pressCount = 0
     private var lastPressTime = 0L
+
+    private var routePreference: RoutePlanner.RoutePreference = RoutePlanner.RoutePreference.SHORTEST_PATH
 
     companion object {
         private const val TAG = "JourneyTrackingService"
@@ -105,6 +108,14 @@ class JourneyTrackingService : LifecycleService() {
         when (intent?.action) {
             ACTION_START_JOURNEY -> {
                 val tripId = intent.getLongExtra(EXTRA_TRIP_ID, -1L)
+                // Get route preference from intent
+                val preferenceString = intent.getStringExtra("ROUTE_PREFERENCE")
+                routePreference = try {
+                    RoutePlanner.RoutePreference.valueOf(preferenceString ?: "SHORTEST_PATH")
+                } catch (e: Exception) {
+                    RoutePlanner.RoutePreference.SHORTEST_PATH
+                }
+
                 if (tripId != -1L) startJourneyTracking(tripId)
             }
             ACTION_STOP_JOURNEY -> stopJourneyTracking()
@@ -139,13 +150,15 @@ class JourneyTrackingService : LifecycleService() {
                 database.tripDao().updateVisitedStations(tripId, initialVisited)
                 currentTrip = currentTrip!!.copy(visitedStations = initialVisited)
 
-                // Load path from database
-                val path = MetroNavigator.findShortestPath(
-                    database.metroStationDao(),
+                // Load path using selected preference
+                val routePlanner = RoutePlanner(database)
+                val route = routePlanner.findRoute(
                     currentTrip!!.sourceStationId,
-                    currentTrip!!.destinationStationId
+                    currentTrip!!.destinationStationId,
+                    routePreference
                 )
-                stationRoute = path.distinctBy { it.stationId }
+                stationRoute = route?.segments?.flatMap { it.stations }?.distinctBy { it.stationId }
+                    ?: emptyList()
                 currentStationIndex = 0
 
                 isTracking = true
