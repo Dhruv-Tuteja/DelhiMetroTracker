@@ -56,7 +56,7 @@ class DashboardRepository(private val database: AppDatabase) {
     private fun calculateCarbonSaved(totalStationsVisited: Int): Double {
         // Real-world average distance between Delhi Metro stations is ~1.2km
         val kmPerStation = 1.2
-        val co2SavingsPerKm = 0.121 // Specific to transit vs car offset
+        val co2SavingsPerKm = 32.38 / 1000.0 // Specific to transit vs car offset
 
         val totalKm = totalStationsVisited * kmPerStation
         return totalKm * co2SavingsPerKm
