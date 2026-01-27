@@ -3,6 +3,7 @@ package com.metro.delhimetrotracker.data.local.database.entities // Fixed packag
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
+import androidx.room.ColumnInfo
 import com.metro.delhimetrotracker.data.local.database.converters.Converters // Updated
 import java.util.Date
 
@@ -39,7 +40,19 @@ data class Trip(
     
     // Additional metadata
     val createdAt: Date = Date(),
-    val notes: String? = null
+    val notes: String? = null,
+
+    @ColumnInfo(name = "had_sos_alert")
+    val hadSosAlert: Boolean = false,
+
+    @ColumnInfo(name = "sos_station_name")
+    val sosStationName: String? = null,
+
+    @ColumnInfo(name = "sos_timestamp")
+    val sosTimestamp: Long? = null,
+
+    @ColumnInfo(name = "cancellation_reason")
+    val cancellationReason: String? = null
 )
 
 enum class TripStatus {

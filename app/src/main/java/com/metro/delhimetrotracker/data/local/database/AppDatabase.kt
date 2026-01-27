@@ -16,7 +16,7 @@ import com.metro.delhimetrotracker.data.local.database.entities.*
         MetroStation::class,
         UserSettings::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -39,7 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .fallbackToDestructiveMigration(false) // Fix for deprecation warning
+                    .fallbackToDestructiveMigration(true) // Fix for deprecation warning
                     .build()
                 INSTANCE = instance
                 instance

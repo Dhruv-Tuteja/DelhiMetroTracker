@@ -23,6 +23,12 @@ import com.metro.delhimetrotracker.utils.sms.SmsHelper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
 import java.util.*
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import com.metro.delhimetrotracker.ui.TrackingActivity
+import com.metro.delhimetrotracker.data.model.TripCardData
+import android.widget.Toast
+import android.Manifest
 
 /**
  * Production Foreground service for Delhi Metro Tracking.
@@ -42,6 +48,9 @@ class JourneyTrackingService : LifecycleService() {
 
     private var isTracking = false
     private var lastDetectedStationId: String? = null
+
+    private var pressCount = 0
+    private var lastPressTime = 0L
 
     companion object {
         private const val TAG = "JourneyTrackingService"
@@ -74,6 +83,20 @@ class JourneyTrackingService : LifecycleService() {
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
         createNotificationChannel()
+
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        registerReceiver(powerButtonReceiver, filter)
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            unregisterReceiver(powerButtonReceiver)
+        } catch (e: Exception) {
+            // Receiver not registered
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -92,12 +115,14 @@ class JourneyTrackingService : LifecycleService() {
             }
         }
 
-        // Start as foreground immediately to satisfy Android 12+ requirements
-        val notification = createNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        // Only start foreground for actual journey tracking, not for stop commands
+        if (intent?.action == ACTION_START_JOURNEY) {
+            val notification = createNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
         }
 
         return START_STICKY
@@ -126,6 +151,12 @@ class JourneyTrackingService : LifecycleService() {
                 isTracking = true
 
                 withContext(Dispatchers.Main) {
+                    val notification = createNotification()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+                    } else {
+                        startForeground(NOTIFICATION_ID, notification)
+                    }
                     startLocationUpdates()
                 }
 
@@ -266,10 +297,31 @@ class JourneyTrackingService : LifecycleService() {
             Log.e(TAG, "Permission error", e)
         }
     }
+    // Inside JourneyTrackingService.kt
+
+    private fun subscribeToLocationUpdates() {
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L).build()
+
+        // ADD THE PERMISSION CHECK HERE
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
+        } else {
+            // Fallback if permission was revoked while service was running
+            Log.e("JourneyService", "Location permission not granted")
+            stopSelf()
+        }
+    }
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             result.lastLocation?.let { location ->
+                // Check for mock location
+                if (isLocationMocked(location)) {
+                    handleMockLocationDetected()
+                    return
+                }
+
+                // Continue with normal station detection logic
                 handleStationDetection(DetectionMethod.GPS, 1.0f, location)
             }
         }
@@ -287,7 +339,9 @@ class JourneyTrackingService : LifecycleService() {
 
     private fun stopJourneyTracking() {
         isTracking = false
-        fusedLocationClient.removeLocationUpdates(locationCallback)
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+        }
 
         lifecycleScope.launch(Dispatchers.IO) {
             currentTrip?.let { trip ->
@@ -365,6 +419,17 @@ class JourneyTrackingService : LifecycleService() {
     }
 
     private fun createNotification(): Notification {
+        // Create intent to open app in its current state
+        val openAppIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val openAppPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            openAppIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
         val stopIntent = Intent(this, JourneyTrackingService::class.java).apply {
             action = ACTION_STOP_JOURNEY
         }
@@ -374,20 +439,35 @@ class JourneyTrackingService : LifecycleService() {
             stopIntent,
             PendingIntent.FLAG_IMMUTABLE
         )
-        val totalStations = stationRoute.size
-        val stationsDone = currentStationIndex // currentStationIndex tracks next unvisited
 
-        // Calculate station progress for the notification bar
+        val totalStations = if (stationRoute.isNotEmpty()) stationRoute.size else 0
+        val stationsDone = currentStationIndex.coerceIn(0, totalStations)
+
         val progress = if (totalStations > 1) stationsDone else 0
-        val upcomingStation = stationRoute.getOrNull(currentStationIndex)?.stationName ?: "Destination"
+        val upcomingStation = stationRoute.getOrNull(currentStationIndex)?.stationName
+            ?: currentTrip?.destinationStationName
+            ?: "Destination"
+
+        val sosIntent = Intent(this, TrackingActivity::class.java).apply {
+            action = "ACTION_SOS_FROM_NOTIFICATION"
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val sosPendingIntent = PendingIntent.getActivity(
+            this,
+            1,
+            sosIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Next Stop: $upcomingStation") // Show upcoming station in title
-            .setContentText("$stationsDone/$totalStations stations covered") // Show stations count
+            .setContentTitle("Next Stop: $upcomingStation")
+            .setContentText("$stationsDone/$totalStations stations covered")
             .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setProgress(totalStations, stationsDone, false)
+            .setContentIntent(openAppPendingIntent)
+            .addAction(R.drawable.ic_notification, "🆘 SOS", sosPendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "End Journey", stopPendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
@@ -413,5 +493,120 @@ class JourneyTrackingService : LifecycleService() {
     override fun onBind(intent: Intent): IBinder? {
         super.onBind(intent)
         return null
+    }
+    private val powerButtonReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF || intent?.action == Intent.ACTION_SCREEN_ON) {
+                val now = System.currentTimeMillis()
+
+                if (now - lastPressTime < 1000) { // Within 1 second
+                    pressCount++
+                } else {
+                    pressCount = 1
+                }
+
+                lastPressTime = now
+
+                if (pressCount >= 5) {
+                    // Launch TrackingActivity with SOS flag
+                    val sosIntent = Intent(context, TrackingActivity::class.java).apply {
+                        putExtra("TRIGGER_SOS", true)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    }
+                    context?.startActivity(sosIntent)
+                    pressCount = 0
+                }
+            }
+        }
+    }
+
+    private fun isLocationMocked(location: Location): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12 (API 31) and above
+            location.isMock
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            // API 18-30
+            @Suppress("DEPRECATION")
+            location.isFromMockProvider
+        } else {
+            false
+        }
+    }
+
+    private fun handleMockLocationDetected() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val trip = currentTrip
+
+            if (trip != null && trip.emergencyContact.isNotEmpty()) {
+                try {
+                    // Get last known location
+                    val lastLocation = if (ActivityCompat.checkSelfPermission(
+                            this@JourneyTrackingService,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        fusedLocationClient.lastLocation.await()
+                    } else {
+                        null
+                    }
+
+                    // Get last visited station
+                    val lastVisitedStationId = trip.visitedStations.lastOrNull() ?: trip.sourceStationId
+                    val lastVisitedStation = database.metroStationDao().getStationById(lastVisitedStationId)
+                    val lastStationName = lastVisitedStation?.stationName ?: trip.sourceStationName
+
+                    // Build location string
+                    val locationString = if (lastLocation != null) {
+                        "https://maps.google.com/?q=${lastLocation.latitude},${lastLocation.longitude}"
+                    } else {
+                        "Location unavailable"
+                    }
+
+                    // Send emergency alert
+                    val alertMessage = """
+⚠️ SECURITY ALERT - FAKE GPS DETECTED!
+
+Mock location detected on traveler's device.
+Last Known Station: $lastStationName
+Last Known Location: $locationString
+
+Trip tracking has been terminated. Please contact the traveler immediately.
+
+- Delhi Metro Tracker Security
+                    """.trimIndent()
+
+                    smsHelper.sendSms(trip.emergencyContact, alertMessage)
+                    Log.d(TAG, "Mock location alert sent to ${trip.emergencyContact}")
+
+                    // Mark trip as cancelled in database
+                    database.tripDao().completeTripWithReason(
+                        trip.id,
+                        TripStatus.CANCELLED,
+                        System.currentTimeMillis(),
+                        ((System.currentTimeMillis() - trip.startTime.time) / 60000).toInt(),
+                        finalDestination = lastStationName,
+                        reason = "FAKE_GPS_DETECTED"
+                    )
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to send mock location alert", e)
+                }
+            }
+
+            // Stop tracking and notify user
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    this@JourneyTrackingService,
+                    "⚠️ Mock location detected! Trip tracking disabled.",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                val intent = Intent("ACTION_MOCK_LOCATION_DETECTED")
+                sendBroadcast(intent)
+
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }
     }
 }

@@ -672,16 +672,16 @@
         },
         {
           "name": "Uttam Nagar West",
-          "latitude": 28.62481,
-          "longitude": 77.0653,
+          "latitude": 28.62177,
+          "longitude": 77.05585,
           "sequence": 12,
           "interchange": false,
           "interchangeLines": []
         },
         {
           "name": "Uttam Nagar East",
-          "latitude": 28.62177,
-          "longitude": 77.05585,
+          "latitude": 28.62481,
+          "longitude": 77.0653,
           "sequence": 13,
           "interchange": false,
           "interchangeLines": []

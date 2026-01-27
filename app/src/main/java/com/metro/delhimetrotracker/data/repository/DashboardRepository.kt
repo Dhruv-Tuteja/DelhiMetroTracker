@@ -144,7 +144,10 @@ class DashboardRepository(private val database: AppDatabase) {
             interchangeStations = interchangeStations,
             lineColors = lineColors,
             expectedDurationMinutes = expectedDuration,
-            delayMinutes = delayMinutes
+            delayMinutes = delayMinutes,
+            hadSosAlert = trip.hadSosAlert,
+            sosStationName = trip.sosStationName,
+            sosTimestamp = trip.sosTimestamp
         )
     }
 }

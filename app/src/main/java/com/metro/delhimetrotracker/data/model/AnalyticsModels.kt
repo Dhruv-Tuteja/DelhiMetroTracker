@@ -27,7 +27,11 @@ data class TripCardData(
     val interchangeStations: List<String>,
     val lineColors: List<String>,
     val expectedDurationMinutes: Int,
-    val delayMinutes: Int
+    val delayMinutes: Int,
+
+    val hadSosAlert: Boolean? = false,
+    val sosStationName: String? = null,
+    val sosTimestamp: Long? = null
 ) {
     val isDelayed: Boolean get() = delayMinutes > 5
     val isSingleLine: Boolean get() = lineColors.size == 1

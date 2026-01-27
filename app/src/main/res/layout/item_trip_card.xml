@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -10,11 +11,23 @@
     app:cardCornerRadius="12dp"
     app:cardBackgroundColor="@color/background_card"
     app:strokeWidth="0dp">
+    <!-- Add this at the top of your trip card layout -->
+
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp">
+
+        <View
+            android:id="@+id/sosIndicator"
+            android:layout_width="4dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/holo_red_dark"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
 
         <!-- Line Color Indicator Strip -->
         <View

@@ -16,7 +16,25 @@
         android:background="@drawable/gradient_top"
         app:layout_constraintTop_toTopOf="parent"/>
 
-    <!-- LARGER Logo -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/btnAppInfo"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginBottom="24dp"
+        app:cardBackgroundColor="#1A1F3A"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="6dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:src="@android:drawable/ic_menu_info_details"
+            app:tint="#64B5F6" />
+    </com.google.android.material.card.MaterialCardView>
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/logoCard"
         android:layout_width="180dp"

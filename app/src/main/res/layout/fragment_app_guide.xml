@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0E27"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="User Guide &amp; Safety"
+        android:textColor="#FFFFFF"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="20dp"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbarThumbVertical="@android:color/darker_gray">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:text="🎯 Navigation &amp; Gestures"
+                android:textColor="#64B5F6"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:text="• Start Journey: Select stations to begin tracking.\n• Double-Tap: Quickly restart a saved trip from history.\n• Long-Press: Share your trip analytics and route details.\n• Swipe Card: Effortlessly delete old trips from your dashboard."
+                android:textColor="#8A94B8"
+                android:textSize="14sp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:lineSpacingExtra="5dp"/>
+
+            <TextView
+                android:text="🛰️ Live Tracking Features"
+                android:textColor="#4CAF50"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:text="• Real-time Speed: Monitor your train's speed directly on the tracking screen.\n• Manual Override: If underground GPS fails, use 'Update Station' to manually progress your journey.\n• Progress Bar: Visual indicator of how many stations are left in your trip."
+                android:textColor="#8A94B8"
+                android:textSize="14sp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:lineSpacingExtra="5dp"/>
+
+            <TextView
+                android:text="🆘 Safety &amp; SOS"
+                android:textColor="#FF5252"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:text="Trigger an emergency alert via:\n1. SOS Button: Accessible on the main tracking header.\n2. Volume Button: Rapidly press 5 times to trigger (Doesn't work with screen off).\n3. Notification: Use the SOS shortcut in your notification tray."
+                android:textColor="#8A94B8"
+                android:textSize="14sp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:lineSpacingExtra="5dp"/>
+
+            <TextView
+                android:text="🔋 Essential Performance"
+                android:textColor="#FFD700"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:text="To prevent the app from sleeping, enable 'Unrestricted Background Usage' in settings. This ensures your SOS and station alerts work even when your phone is in your pocket."
+                android:textColor="#8A94B8"
+                android:textSize="14sp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:lineSpacingExtra="5dp"/>
+
+            <TextView
+                android:text="🚀 Upcoming Innovations"
+                android:textColor="#E1BEE7"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:text="• Cloud Sync: Optional backup to retain your data across devices.\n• Integrity Shield: Mock location detection to ensure trip accuracy.\n• Recharge Alerts: Smart reminders for your Metro Card balance."
+                android:textColor="#8A94B8"
+                android:textSize="14sp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:lineSpacingExtra="5dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCloseGuide"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="32dp" android:text="I Understand"
+        android:textAllCaps="false"
+        android:textStyle="bold"
+        app:cornerRadius="16dp"
+        app:backgroundTint="#64B5F6"/>
+
+</LinearLayout>

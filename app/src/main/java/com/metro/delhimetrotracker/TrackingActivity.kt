@@ -1,24 +1,37 @@
 package com.metro.delhimetrotracker.ui
 
+import android.Manifest
+import android.animation.ArgbEvaluator
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.graphics.Color
+import android.net.Uri
 import android.os.*
+import android.telephony.SmsManager
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.metro.delhimetrotracker.MetroTrackerApplication
@@ -28,20 +41,61 @@ import com.metro.delhimetrotracker.service.JourneyTrackingService
 import com.metro.delhimetrotracker.utils.MetroNavigator
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import android.view.KeyEvent
+import kotlinx.coroutines.delay
 
 class TrackingActivity : AppCompatActivity() {
 
     private lateinit var adapter: StationAdapter
     private lateinit var progressIndicator: LinearProgressIndicator
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    // Speed tracking variables
+    private var locationCallback: com.google.android.gms.location.LocationCallback? = null
+    private var previousLocation: android.location.Location? = null
+
 
     // Store journey data for manual update dialog
     private var currentJourneyPath: List<MetroStation> = emptyList()
     private var visitedStationIds: List<String> = emptyList()
+    private var emergencyContact: String = ""
+    private var currentTripId: Long = -1L
+
+    private var sosTimer: CountDownTimer? = null
+    private var flashAnimator: ObjectAnimator? = null
+
+    private var powerButtonPressCount = 0
+    private var lastPowerButtonPressTime = 0L
+    private val POWER_BUTTON_TIMEOUT = 3000L // 3 seconds window
+
+
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent) // Important!
+        if (intent.getBooleanExtra("TRIGGER_SOS", false) ||
+            intent.action == "ACTION_SOS_FROM_NOTIFICATION") {
+            startSosCountdown()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_tracking)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        // Start speed tracking
+        setupSpeedTracking()
+
+        // Request SOS permissions
+        checkAndRequestPermissions()
+
+        if (intent.getBooleanExtra("TRIGGER_SOS", false) ||
+            intent.action == "ACTION_SOS_FROM_NOTIFICATION") {
+            startSosCountdown()
+        }
 
         // Ensure these IDs match your XML exactly
         val rootLayout = findViewById<ConstraintLayout>(R.id.trackingRoot) ?: findViewById(android.R.id.content)
@@ -55,13 +109,18 @@ class TrackingActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnManualUpdate).setOnClickListener {
-            // Filter remaining stations (not yet visited)
             val remainingStations = currentJourneyPath.filter { it.stationId !in visitedStationIds }
             showManualUpdateDialog(remainingStations)
         }
 
+        // SOS Button Click Listener
+        findViewById<Button>(R.id.btnSOS)?.setOnClickListener {
+            startSosCountdown()
+        }
+
         rvPath.layoutManager = LinearLayoutManager(this)
         val tripId = intent.getLongExtra("EXTRA_TRIP_ID", -1L)
+        currentTripId = tripId
         val db = (application as MetroTrackerApplication).database
 
         val btnStop = findViewById<Button>(R.id.btnStopJourney)
@@ -81,13 +140,15 @@ class TrackingActivity : AppCompatActivity() {
         lifecycleScope.launch {
             db.tripDao().getTripByIdFlow(tripId).collectLatest { trip ->
                 trip?.let { activeTrip ->
+                    // Store emergency contact
+                    emergencyContact = activeTrip.emergencyContact
+
                     val journeyPath = MetroNavigator.findShortestPath(
                         db.metroStationDao(),
                         activeTrip.sourceStationId,
                         activeTrip.destinationStationId
                     )
 
-                    // Store for manual update dialog
                     currentJourneyPath = journeyPath
 
                     if (currentJourneyPath.isEmpty()) {
@@ -105,15 +166,12 @@ class TrackingActivity : AppCompatActivity() {
                         rvPath.adapter = adapter
                     }
 
-                    // Update Hero Text: Showing the next unvisited station
                     val nextStation = journeyPath.find { it.stationId == (activeTrip.visitedStations.lastOrNull()) }
                     findViewById<TextView>(R.id.tvCurrentStation).text = nextStation?.stationName ?: activeTrip.sourceStationName
 
-                    // Update Progress Bar
                     if (journeyPath.isNotEmpty()) {
                         val totalStations = journeyPath.size
 
-                        // Find the index of the last visited station in the journey path
                         val currentStationIndex = journeyPath.indexOfLast { station ->
                             activeTrip.visitedStations.contains(station.stationId)
                         }.coerceAtLeast(0)
@@ -121,34 +179,23 @@ class TrackingActivity : AppCompatActivity() {
                         val progressText = "${currentStationIndex + 1}/$totalStations stations"
                         findViewById<TextView>(R.id.tvProgressPercent).text = progressText
 
-                        //Estimated Time Left (ETA)
-                        // Assuming an average of 2 minutes between stations in Delhi Metro
                         val minutesRemaining = stationsLeft * 2
                         val estTimeText = if (minutesRemaining > 0) "~$minutesRemaining mins left" else "Arriving"
-                        // Add a TextView for this in your XML or reuse an existing one
                         findViewById<TextView>(R.id.tvCurrentStationLabel).text = "EST. TIME: $estTimeText"
 
                         val progress = when {
-                            // At starting station (index 0)
                             currentStationIndex == 0 -> 0f
-
-                            // At destination
                             currentStationIndex == totalStations - 1 -> 100f
-
-                            // In between
                             else -> {
                                 val totalSegments = totalStations - 1
                                 (currentStationIndex.toFloat() / totalSegments.toFloat() * 100)
                             }
                         }
-//                        val progressPercent = findViewById<TextView>(R.id.tvProgressPercent)
-//                        progressPercent.text = "${progress.toInt()}%" // Dynamic update
                         progressIndicator.setProgress(progress.toInt(), true)
                     }
 
                     adapter.submitData(journeyPath, activeTrip.visitedStations)
 
-                    // Logic for vibration alerts at destination
                     val currentId = activeTrip.visitedStations.lastOrNull()
                     if (currentId != null && activeTrip.visitedStations.size > 1) {
                         val penultimateId = if (journeyPath.size >= 2) journeyPath[journeyPath.size - 2].stationId else null
@@ -160,7 +207,48 @@ class TrackingActivity : AppCompatActivity() {
             }
         }
     }
+    private fun checkAndRequestPermissions() {
+        val permissionsNeeded = mutableListOf<String>()
 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+            != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.SEND_SMS)
+        }
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+            != PackageManager.PERMISSION_GRANTED) {
+            permissionsNeeded.add(Manifest.permission.CALL_PHONE)
+        }
+
+        if (permissionsNeeded.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                permissionsNeeded.toTypedArray(),
+                REQUEST_SOS_PERMISSIONS
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == REQUEST_SOS_PERMISSIONS) {
+            val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            if (allGranted) {
+                Toast.makeText(this, "SOS permissions granted", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "⚠️ SOS requires SMS and Call permissions", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    companion object {
+        private const val REQUEST_SOS_PERMISSIONS = 1001
+    }
     private fun triggerTripleVibration() {
         val v = getSystemService(VIBRATOR_SERVICE) as Vibrator
         val pattern = longArrayOf(0, 400, 200, 400, 200, 400)
@@ -205,15 +293,36 @@ class TrackingActivity : AppCompatActivity() {
             registerReceiver(smsResultReceiver, filterSms)
             registerReceiver(resetReceiver, filterReset)
         }
+
+        // Inside TrackingActivity.kt onCreate or onStart
+        val mockReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                // Show a blocking dialog or finish the activity
+                MaterialAlertDialogBuilder(this@TrackingActivity)
+                    .setTitle("Security Alert")
+                    .setMessage("Mock location apps are not allowed. Please disable them to track your journey.")
+                    .setCancelable(false)
+                    .setPositiveButton("Exit") { _, _ -> finish() }
+                    .show()
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(mockReceiver, IntentFilter("ACTION_MOCK_LOCATION_DETECTED"), RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(mockReceiver, IntentFilter("ACTION_MOCK_LOCATION_DETECTED"))
+        }
     }
+
+    private var mockReceiver: BroadcastReceiver? = null
 
     override fun onStop() {
         super.onStop()
         try {
             unregisterReceiver(smsResultReceiver)
             unregisterReceiver(resetReceiver)
+            mockReceiver?.let { unregisterReceiver(it) }
         } catch (e: Exception) {
-            // Log.e("TrackingActivity", "Receiver not registered")
+            // Receiver not registered
         }
     }
 
@@ -237,23 +346,19 @@ class TrackingActivity : AppCompatActivity() {
             timeOptions
         )
 
-        // Create dialog without title and buttons (we have custom ones in the layout)
         val dialog = MaterialAlertDialogBuilder(this)
             .setView(dialogView)
             .setCancelable(true)
             .create()
 
-        // Handle Cancel button
         btnCancel.setOnClickListener {
             dialog.dismiss()
         }
 
-        // Handle Update button
         btnUpdate.setOnClickListener {
             val selectedStation = remainingStations[spinnerStation.selectedItemPosition]
             val timeOffset = timeOptions[spinnerTime.selectedItemPosition]
 
-            // Send command to Service
             val intent = Intent(this, JourneyTrackingService::class.java).apply {
                 action = JourneyTrackingService.ACTION_MANUAL_STATION_UPDATE
                 putExtra(JourneyTrackingService.EXTRA_STATION_ID, selectedStation.stationId)
@@ -265,5 +370,303 @@ class TrackingActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun startSosCountdown() {
+        val overlay = findViewById<FrameLayout>(R.id.sosOverlay)
+        val tvCountdown = findViewById<TextView>(R.id.tvSosCountdown)
+        overlay.visibility = View.VISIBLE
+
+        // Flashing Red Animation (faster for urgency)
+        flashAnimator = ObjectAnimator.ofInt(
+            overlay, "backgroundColor",
+            Color.parseColor("#88FF0000"), Color.parseColor("#FFFF0000")
+        ).apply {
+            duration = 300
+            setEvaluator(ArgbEvaluator())
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            start()
+        }
+
+        // Get vibrator
+        val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+
+        // 5-Second Countdown Timer with vibration every second
+        sosTimer = object : CountDownTimer(5000, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                val secondsLeft = (millisUntilFinished / 1000) + 1
+                tvCountdown.text = "🆘 SENDING SOS IN $secondsLeft"
+
+                // Strong vibration pattern every second
+                val vibratePattern = longArrayOf(0, 300, 100, 300)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createWaveform(vibratePattern, -1))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(vibratePattern, -1)
+                }
+            }
+
+            override fun onFinish() {
+                // Final long vibration before sending
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(1000)
+                }
+
+                executeEmergencyActions()
+                stopSosUI()
+            }
+        }.start()
+
+        // Double Tap to Cancel
+        var lastClickTime: Long = 0
+        overlay.setOnClickListener {
+            val clickTime = System.currentTimeMillis()
+            if (clickTime - lastClickTime < 300) {
+                cancelSos()
+            }
+            lastClickTime = clickTime
+        }
+    }
+
+    private fun executeEmergencyActions() {
+        if (emergencyContact.isEmpty()) {
+            Toast.makeText(this, "No emergency contact set", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        lifecycleScope.launch {
+            try {
+                // Check SMS permission FIRST
+                if (ActivityCompat.checkSelfPermission(
+                        this@TrackingActivity,
+                        Manifest.permission.SEND_SMS
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    Toast.makeText(this@TrackingActivity, "SMS permission not granted", Toast.LENGTH_LONG).show()
+                    android.util.Log.e("TrackingActivity", "SMS permission denied")
+                    return@launch
+                }
+
+                val location = if (ActivityCompat.checkSelfPermission(
+                        this@TrackingActivity,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    fusedLocationClient.lastLocation.await()
+                } else {
+                    null
+                }
+
+                val lastStation = findViewById<TextView>(R.id.tvCurrentStation)?.text?.toString() ?: "Unknown Station"
+
+                // 🔥 SAVE SOS EVENT TO DATABASE
+                val db = (application as MetroTrackerApplication).database
+                db.tripDao().markTripWithSos(
+                    tripId = currentTripId,
+                    stationName = lastStation,
+                    timestamp = System.currentTimeMillis()
+                )
+                android.util.Log.d("TrackingActivity", "SOS marked in database for trip $currentTripId at $lastStation")
+
+                val mapsLink = if (location != null) {
+                    "https://maps.google.com/?q=${location.latitude},${location.longitude}"
+                } else {
+                    "Location unavailable"
+                }
+
+                val message = """
+🆘 EMERGENCY ALERT!
+I need immediate help.
+Last Metro Station: $lastStation
+Live Location: $mapsLink
+
+- Delhi Metro Tracker SOS
+            """.trimIndent()
+
+                android.util.Log.d("TrackingActivity", "Sending SMS to: $emergencyContact")
+
+                try {
+                    val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        getSystemService(SmsManager::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        SmsManager.getDefault()
+                    }
+
+                    val parts = smsManager.divideMessage(message)
+                    if (parts.size > 1) {
+                        smsManager.sendMultipartTextMessage(
+                            emergencyContact,
+                            null,
+                            parts,
+                            null,
+                            null
+                        )
+                        android.util.Log.d("TrackingActivity", "Multipart SMS sent: ${parts.size} parts")
+                    } else {
+                        smsManager.sendTextMessage(emergencyContact, null, message, null, null)
+                        android.util.Log.d("TrackingActivity", "Single SMS sent")
+                    }
+
+                    Toast.makeText(
+                        this@TrackingActivity,
+                        "✅ SOS SMS sent to $emergencyContact",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                } catch (smsException: Exception) {
+                    android.util.Log.e("TrackingActivity", "SMS send failed", smsException)
+                    Toast.makeText(
+                        this@TrackingActivity,
+                        "SMS failed: ${smsException.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+
+                kotlinx.coroutines.delay(1000)
+
+                if (ActivityCompat.checkSelfPermission(
+                        this@TrackingActivity,
+                        Manifest.permission.CALL_PHONE
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    try {
+                        val callIntent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$emergencyContact"))
+                        startActivity(callIntent)
+                        android.util.Log.d("TrackingActivity", "Emergency call initiated")
+                    } catch (callException: Exception) {
+                        android.util.Log.e("TrackingActivity", "Call failed", callException)
+                        Toast.makeText(
+                            this@TrackingActivity,
+                            "Call failed: ${callException.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                } else {
+                    android.util.Log.e("TrackingActivity", "Call permission denied")
+                    Toast.makeText(this@TrackingActivity, "Call permission not granted", Toast.LENGTH_LONG).show()
+                }
+
+            } catch (e: Exception) {
+                android.util.Log.e("TrackingActivity", "SOS execution failed", e)
+                Toast.makeText(
+                    this@TrackingActivity,
+                    "SOS failed: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun cancelSos() {
+        sosTimer?.cancel()
+        flashAnimator?.cancel()
+        stopSosUI()
+        Toast.makeText(this, "SOS Cancelled", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun stopSosUI() {
+        sosTimer?.cancel()
+        flashAnimator?.cancel()
+        findViewById<FrameLayout>(R.id.sosOverlay)?.visibility = View.GONE
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            val currentTime = System.currentTimeMillis()
+
+            // Reset count if timeout exceeded
+            if (currentTime - lastPowerButtonPressTime > POWER_BUTTON_TIMEOUT) {
+                powerButtonPressCount = 0
+            }
+
+            powerButtonPressCount++
+            lastPowerButtonPressTime = currentTime
+
+            // Show feedback
+            Toast.makeText(this, "SOS trigger: $powerButtonPressCount/5", Toast.LENGTH_SHORT).show()
+
+            if (powerButtonPressCount >= 5) {
+                powerButtonPressCount = 0
+                startSosCountdown()
+                return true
+            }
+
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopSosUI()
+        locationCallback?.let {
+            fusedLocationClient.removeLocationUpdates(it)
+        }
+    }
+
+    /**
+     * Setup simple speed tracking
+     */
+    private fun setupSpeedTracking() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
+        val locationRequest = com.google.android.gms.location.LocationRequest.create().apply {
+            interval = 1000 // Update every second
+            fastestInterval = 500
+            priority = com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
+        }
+
+        locationCallback = object : com.google.android.gms.location.LocationCallback() {
+            override fun onLocationResult(locationResult: com.google.android.gms.location.LocationResult) {
+                locationResult.lastLocation?.let { location ->
+                    val speedKmh = if (location.hasSpeed()) {
+                        location.speed * 3.6f // Convert m/s to km/h
+                    } else {
+                        calculateSpeedFromDistance(location)
+                    }
+                    updateSpeedDisplay(speedKmh)
+                }
+            }
+        }
+
+        fusedLocationClient.requestLocationUpdates(
+            locationRequest,
+            locationCallback!!,
+            Looper.getMainLooper()
+        )
+    }
+
+    /**
+     * Calculate speed from distance between points
+     */
+    private fun calculateSpeedFromDistance(currentLocation: android.location.Location): Float {
+        previousLocation?.let { previous ->
+            val distance = previous.distanceTo(currentLocation)
+            val timeDiff = (currentLocation.time - previous.time) / 1000f
+            previousLocation = currentLocation
+
+            return if (timeDiff > 0) (distance / timeDiff) * 3.6f else 0f
+        }
+        previousLocation = currentLocation
+        return 0f
+    }
+
+    /**
+     * Update speed TextView
+     */
+    private fun updateSpeedDisplay(speedKmh: Float) {
+        findViewById<TextView>(R.id.tvSpeedValue)?.text = String.format("%.0f", speedKmh.coerceAtLeast(0f))
     }
 }

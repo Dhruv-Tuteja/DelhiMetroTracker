@@ -27,6 +27,10 @@ import android.widget.Toast
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import androidx.recyclerview.widget.ItemTouchHelper
+import java.text.SimpleDateFormat
+import java.util.Locale
+import com.metro.delhimetrotracker.data.model.TripCardData
+import java.util.Date
 
 /**
  * Dashboard Fragment - Metro Life Analytics
@@ -76,6 +80,9 @@ class DashboardFragment : Fragment() {
         tripAdapter = TripHistoryAdapter(object : TripHistoryAdapter.OnTripDoubleTapListener {
             override fun onTripDoubleTap(source: String, destination: String) {
                 (activity as? MainActivity)?.showStationSelectionDialog(source, destination)
+            }
+            override fun onTripShare(trip: TripCardData) {
+                shareTripDetails(trip)
             }
         })
         rvTripHistory.apply {
@@ -127,6 +134,48 @@ class DashboardFragment : Fragment() {
         ItemTouchHelper(swipeHandler).attachToRecyclerView(rvTripHistory)
         observeUiState()
     }
+    private fun shareTripDetails(trip: TripCardData) {
+        val dateStr = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(trip.startTime)
+        val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(trip.startTime)
+
+        val durationText = if (trip.durationMinutes == 0) {
+            "Quick ride"
+        } else {
+            "${trip.durationMinutes} mins"
+        }
+
+        // Add SOS information if present
+        val sosInfo = if (trip.hadSosAlert == true && trip.sosStationName != null) {
+            val sosTime = trip.sosTimestamp?.let {
+                SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(it))
+            } ?: "Unknown time"
+            "\n🆘 SOS Alert: ${trip.sosStationName} at $sosTime"
+        } else {
+            ""
+        }
+
+        val shareBody = """
+My Delhi Metro Journey
+
+From: ${trip.sourceStationName}
+To: ${trip.destinationStationName}
+Date: $dateStr at $timeStr
+Duration: $durationText
+Stations covered: ${trip.stationCount}$sosInfo
+
+— Shared via Delhi Metro Tracker
+    """.trimIndent()
+
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, shareBody)
+            type = "text/plain"
+        }
+
+        val shareIntent = Intent.createChooser(sendIntent, "Share Trip")
+        startActivity(shareIntent)
+    }
+
 
     private fun initViews(view: View) {
         tvTotalTrips = view.findViewById(R.id.tvTotalTrips)
@@ -218,6 +267,7 @@ class DashboardFragment : Fragment() {
 //        }
 //        startActivity(intent)
 //    }
+
 
     private fun showError(message: String) {
         progressLoading.visibility = View.GONE

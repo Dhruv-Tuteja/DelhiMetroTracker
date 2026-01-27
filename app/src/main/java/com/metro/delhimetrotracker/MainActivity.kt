@@ -33,6 +33,11 @@ import java.util.Date
 import com.google.android.material.button.MaterialButton
 import android.app.Dialog
 import com.google.android.material.appbar.MaterialToolbar
+import androidx.fragment.app.Fragment
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
 
 class MainActivity : AppCompatActivity() {
 
@@ -123,10 +128,21 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialCardView>(R.id.btnViewDashboard)?.setOnClickListener {
             openDashboard()
         }
+        findViewById<MaterialCardView>(R.id.btnAppInfo).setOnClickListener {
+            openAppGuide()
+        }
+        val btnInfo = findViewById<MaterialCardView>(R.id.btnAppInfo)
 
         requestAllPermissions()
         checkBatteryOptimization() // Check and show battery optimization dialog
 
+    }
+    private fun openAppGuide() {
+        val guideFragment = AppGuideFragment()
+        supportFragmentManager.beginTransaction()
+            .replace(android.R.id.content, guideFragment)
+            .addToBackStack(null)
+            .commit()
     }
     private fun openDashboard() {
         supportFragmentManager.beginTransaction()
@@ -367,5 +383,14 @@ class MainActivity : AppCompatActivity() {
                 .setNegativeButton("Later", null)
                 .show()
         }
+    }
+}
+class AppGuideFragment : Fragment() {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        val view = inflater.inflate(R.layout.fragment_app_guide, container, false)
+        view.findViewById<Button>(R.id.btnCloseGuide).setOnClickListener {
+            parentFragmentManager.popBackStack()
+        }
+        return view
     }
 }

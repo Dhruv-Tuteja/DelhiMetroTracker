@@ -71,6 +71,19 @@ interface TripDao {
         duration: Int,
         finalDestination: String
     )
+
+    @Query("UPDATE trips SET had_sos_alert = 1, sos_station_name = :stationName, sos_timestamp = :timestamp WHERE id = :tripId")
+    suspend fun markTripWithSos(tripId: Long, stationName: String, timestamp: Long)
+
+    @Query("UPDATE trips SET status = :status, endTime = :endTime, durationMinutes = :duration, destinationStationName = :finalDestination, cancellation_reason = :reason WHERE id = :tripId")
+    suspend fun completeTripWithReason(
+        tripId: Long,
+        status: TripStatus,
+        endTime: Long,
+        duration: Int,
+        finalDestination: String,
+        reason: String
+    )
 }
 
 @Dao
