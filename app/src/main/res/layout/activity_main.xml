@@ -28,12 +28,15 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <ImageView
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:src="@android:drawable/ic_menu_info_details"
-            app:tint="#64B5F6" />
+            android:text="i"
+            android:textColor="#64B5F6"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:fontFamily="serif" />
     </com.google.android.material.card.MaterialCardView>
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/logoCard"
