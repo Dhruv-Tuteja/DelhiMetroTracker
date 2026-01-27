@@ -30,7 +30,7 @@ import com.metro.delhimetrotracker.data.model.TripCardData
 import android.widget.Toast
 import android.Manifest
 import com.metro.delhimetrotracker.data.repository.RoutePlanner
-
+import com.metro.delhimetrotracker.ui.MainActivity
 /**
  * Production Foreground service for Delhi Metro Tracking.
  * Uses LifecycleService to provide easy access to lifecycleScope for DB operations.
@@ -607,6 +607,7 @@ Trip tracking has been terminated. Please contact the traveler immediately.
             }
 
             // Stop tracking and notify user
+            // Stop tracking and notify user
             withContext(Dispatchers.Main) {
                 Toast.makeText(
                     this@JourneyTrackingService,
@@ -616,6 +617,13 @@ Trip tracking has been terminated. Please contact the traveler immediately.
 
                 val intent = Intent("ACTION_MOCK_LOCATION_DETECTED")
                 sendBroadcast(intent)
+
+                // Redirect to MainActivity with alert flag
+                val mainIntent = Intent(this@JourneyTrackingService, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("MOCK_LOCATION_DETECTED", true)
+                }
+                startActivity(mainIntent)
 
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()

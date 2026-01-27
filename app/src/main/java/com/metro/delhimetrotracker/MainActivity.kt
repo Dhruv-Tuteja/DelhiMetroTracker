@@ -112,9 +112,22 @@ class MainActivity : AppCompatActivity() {
 
         return result
     }
+    private fun showMockLocationDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("⚠️ Security Alert")
+            .setMessage("Fake GPS/Mock location was detected during your journey.\n\nYour emergency contact has been notified and the trip has been terminated for safety reasons.")
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .show()
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        if (intent.getBooleanExtra("MOCK_LOCATION_DETECTED", false)) {
+            showMockLocationDialog()
+        }
 
         // 1. Initialize Database (Load stations from Assets)
         lifecycleScope.launch {
@@ -158,6 +171,10 @@ class MainActivity : AppCompatActivity() {
 
         val quickSource = intent.getStringExtra("QUICK_START_SOURCE")
         val quickDest = intent.getStringExtra("QUICK_START_DEST")
+
+        if (intent.getBooleanExtra("MOCK_LOCATION_DETECTED", false)) {
+            showMockLocationDialog()
+        }
 
         if (quickSource != null && quickDest != null) {
             createNewTripAndStartService(quickSource, quickDest, "")
