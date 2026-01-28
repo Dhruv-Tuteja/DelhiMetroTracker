@@ -376,15 +376,19 @@ $stationList$sosInfo
     private fun updateStatsCard(state: DashboardUiState.Success) {
         val stats = state.stats
 
+        val totalOfficialStations = 289
+
         tvTotalTrips.text = stats.totalTrips.toString()
         tvTotalTime.text = viewModel.formatDuration(stats.totalMinutes)
         tvCarbonSaved.text = viewModel.formatCarbonSavings(stats.carbonSavedKg)
 
-        val progress = if (stats.totalStationsInNetwork > 0) {
-            (stats.uniqueStationsVisited.toFloat() / stats.totalStationsInNetwork * 100).toInt()
+        // Calculate progress based on the REAL total (289), not the old 250
+        val progress = if (totalOfficialStations > 0) {
+            (stats.uniqueStationsVisited.toFloat() / totalOfficialStations * 100).toInt()
         } else 0
 
-        tvStationsVisited.text = "${stats.uniqueStationsVisited} / ${stats.totalStationsInNetwork}"
+        // Display "X / 289"
+        tvStationsVisited.text = "${stats.uniqueStationsVisited} / $totalOfficialStations"
         progressStations.setProgressCompat(progress, true)
     }
 

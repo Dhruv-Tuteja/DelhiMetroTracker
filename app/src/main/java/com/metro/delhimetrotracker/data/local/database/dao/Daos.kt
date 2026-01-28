@@ -136,7 +136,9 @@ interface TripDao {
      */
     @Query("SELECT * FROM trips WHERE isDeleted = 1")
     fun getDeletedTrips(): Flow<List<Trip>>
-
+    // Inside TripDao interface
+    @Query("DELETE FROM trips") // Make sure table name matches your Entity
+    suspend fun deleteAllTrips()
     /**
      * Update sync status for a specific trip
      */

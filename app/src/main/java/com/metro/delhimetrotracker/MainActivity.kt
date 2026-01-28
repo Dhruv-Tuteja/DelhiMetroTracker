@@ -213,12 +213,29 @@ class MainActivity : AppCompatActivity() {
             // User is signed in, show sign out dialog
             MaterialAlertDialogBuilder(this)
                 .setTitle("Sign Out")
-                .setMessage("Are you sure you want to sign out? Your trips will stop syncing to the cloud.")
+                .setMessage("Are you sure you want to sign out? Local data will be cleared.")
                 .setPositiveButton("Sign Out") { _, _ ->
-                    auth.signOut()
-                    googleSignInClient.signOut()
-                    Toast.makeText(this, "Signed out", Toast.LENGTH_SHORT).show()
-                    updateSignInButton()
+                    // 🛑 CRITICAL FIX: Wipe Local Data in Background
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val db = (application as MetroTrackerApplication).database
+                        db.tripDao().deleteAllTrips()
+
+                        // Clear any saved preferences (like last phone number)
+                        getSharedPreferences("MetroPrefs", Context.MODE_PRIVATE).edit().clear().apply()
+
+                        withContext(Dispatchers.Main) {
+                            // Now Sign Out of Cloud
+                            auth.signOut()
+                            googleSignInClient.signOut()
+                            Toast.makeText(this@MainActivity, "Signed out & Data Cleared", Toast.LENGTH_SHORT).show()
+                            updateSignInButton()
+
+                            // Optional: Restart Activity to ensure fresh UI state
+                            val intent = intent
+                            finish()
+                            startActivity(intent)
+                        }
+                    }
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
