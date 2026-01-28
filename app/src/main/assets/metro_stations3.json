@@ -580,12 +580,12 @@
       "color": "#1976D2",
       "stations": [
         {
-          "name": "Dwarka Sector 21(First station)",
+          "name": "Dwarka Sector 21",
           "latitude": 28.55226,
           "longitude": 77.05828,
           "sequence": 1,
           "interchange": false,
-          "interchangeLines": []
+          "interchangeLines": ["Blue line","Orange line"]
         },
         {
           "name": "Dwarka Sector 8",
@@ -2526,7 +2526,7 @@
           "sequence": 6,
           "interchange": true,
           "interchangeLines": [
-            "Blue line"
+            "Blue line","Orange line"
           ]
         },
         {
