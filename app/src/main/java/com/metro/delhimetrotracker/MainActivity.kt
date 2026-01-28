@@ -133,12 +133,17 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val db = (application as MetroTrackerApplication).database
             DatabaseInitializer.initializeStations(this@MainActivity, db)
+
+            // Optional: Clean up any stale trips on first app launch (for debugging)
+            // You can comment this out in production
+            cleanupStaleTrips()
+
             Toast.makeText(this@MainActivity, "Metro data ready!", Toast.LENGTH_SHORT).show()
         }
 
-        // 2. Start button click listener
+        // 2. Start button click listener - Check for active trip first
         findViewById<Button>(R.id.btnStartJourney).setOnClickListener {
-            showStationSelectionDialog()
+            checkForActiveTripBeforeStarting()
         }
         findViewById<MaterialCardView>(R.id.btnViewDashboard)?.setOnClickListener {
             openDashboard()
@@ -152,6 +157,75 @@ class MainActivity : AppCompatActivity() {
         checkBatteryOptimization() // Check and show battery optimization dialog
 
     }
+
+    /**
+     * Clean up any stale trips that might be stuck in IN_PROGRESS status
+     * This is useful for debugging and handling app crashes
+     */
+    private suspend fun cleanupStaleTrips() {
+        withContext(Dispatchers.IO) {
+            val db = (application as MetroTrackerApplication).database
+            val prefs = getSharedPreferences("MetroPrefs", Context.MODE_PRIVATE)
+            val isFirstLaunch = prefs.getBoolean("is_first_launch", true)
+
+            // On first launch, clean up any trips that might exist from previous installs
+            if (isFirstLaunch) {
+                val allTrips = db.tripDao().getRecentTripsDebug()
+                allTrips.forEach { trip ->
+                    if (trip.status == TripStatus.IN_PROGRESS) {
+                        // Mark old IN_PROGRESS trips as CANCELLED
+                        val updatedTrip = trip.copy(
+                            status = TripStatus.CANCELLED,
+                            endTime = Date()
+                        )
+                        db.tripDao().updateTrip(updatedTrip)
+                    }
+                }
+                prefs.edit().putBoolean("is_first_launch", false).apply()
+            }
+        }
+    }
+
+    /**
+     * Check if there's an active trip before allowing a new one to be created
+     */
+    private fun checkForActiveTripBeforeStarting() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = (application as MetroTrackerApplication).database
+
+            // Get the active trip
+            val activeTrip = db.tripDao().getActiveTripIfExists()
+
+            withContext(Dispatchers.Main) {
+                // Additional validation: check if the trip is truly active and has valid data
+                if (activeTrip != null &&
+                    activeTrip.status == TripStatus.IN_PROGRESS &&
+                    activeTrip.sourceStationName.isNotEmpty() &&
+                    activeTrip.destinationStationName.isNotEmpty()) {
+
+                    // Show dialog informing user about existing active trip
+                    MaterialAlertDialogBuilder(this@MainActivity)
+                        .setTitle("⚠️ Active Trip in Progress")
+                        .setMessage("You already have an ongoing trip from ${activeTrip.sourceStationName} to ${activeTrip.destinationStationName}.\n\nPlease complete or cancel your current trip before starting a new one.")
+                        .setPositiveButton("Go to Current Trip") { dialog, _ ->
+                            // Navigate to tracking activity with the active trip
+                            val trackingIntent = Intent(this@MainActivity, TrackingActivity::class.java).apply {
+                                putExtra("EXTRA_TRIP_ID", activeTrip.id)
+                            }
+                            startActivity(trackingIntent)
+                            dialog.dismiss()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .setCancelable(true)
+                        .show()
+                } else {
+                    // No valid active trip, proceed to station selection
+                    showStationSelectionDialog()
+                }
+            }
+        }
+    }
+
     private fun openAppGuide() {
         val guideFragment = AppGuideFragment()
         supportFragmentManager.beginTransaction()

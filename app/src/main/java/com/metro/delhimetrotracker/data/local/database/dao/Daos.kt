@@ -84,6 +84,11 @@ interface TripDao {
         finalDestination: String,
         reason: String
     )
+    @Query("SELECT * FROM trips WHERE status IN ('IN_PROGRESS', 'ACTIVE') ORDER BY startTime DESC LIMIT 1")
+    suspend fun getActiveTripIfExists(): Trip?
+
+    @Query("SELECT * FROM trips ORDER BY startTime DESC LIMIT 5")
+    suspend fun getRecentTripsDebug(): List<Trip>
 }
 
 @Dao
