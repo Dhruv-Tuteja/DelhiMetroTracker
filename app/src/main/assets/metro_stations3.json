@@ -6,7 +6,7 @@
       "color": "#D32F2F",
       "stations": [
         {
-          "name": "Shaheed Sthal(First Station)",
+          "name": "Shaheed Sthal",
           "latitude": 28.6706109,
           "longitude": 77.4155822,
           "sequence": 1,
@@ -240,7 +240,7 @@
           "interchangeLines": []
         },
         {
-          "name": "Rithala(last station)",
+          "name": "Rithala",
           "latitude": 28.72072,
           "longitude": 77.10713,
           "sequence": 29,
@@ -255,7 +255,7 @@
       "color": "#FBC02D",
       "stations": [
         {
-          "name": "Samaypur Badli(First Station)",
+          "name": "Samaypur Badli",
           "latitude": 28.7446158,
           "longitude": 77.1382654,
           "sequence": 1,
@@ -565,7 +565,7 @@
           "interchangeLines": []
         },
         {
-          "name": "Huda City Centre",
+          "name": "Millennium City Centre",
           "latitude": 28.45927,
           "longitude": 77.07268,
           "sequence": 37,
@@ -997,7 +997,18 @@
           "sequence": 49,
           "interchange": false,
           "interchangeLines": []
+        },
+        {
+          "name": "Noida Electronic City",
+          "latitude": 28.62715,
+          "longitude": 77.37294,
+          "sequence": 50,
+          "interchange": true,
+          "interchangeLines": [
+            "Blue line"
+          ]
         }
+
       ]
     },
     {
@@ -1694,10 +1705,18 @@
       "color": "#8E24AA",
       "stations": [
         {
+          "name": "Krishna Park Extension",
+          "latitude": 28.62589,
+          "longitude": 77.09103,
+          "sequence": 1,
+          "interchange": []
+        },
+
+        {
           "name": "Janak Puri West",
           "latitude": 28.6289502,
           "longitude": 77.0779235,
-          "sequence": 1,
+          "sequence": 2,
           "interchange": true,
           "interchangeLines": [
             "Blue line",
@@ -1708,7 +1727,7 @@
           "name": "Dabri Mor - Janakpuri South",
           "latitude": 28.6157555,
           "longitude": 77.085178,
-          "sequence": 2,
+          "sequence": 3,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1716,7 +1735,7 @@
           "name": "Dashrath Puri",
           "latitude": 28.6018751,
           "longitude": 77.0823561,
-          "sequence": 3,
+          "sequence": 4,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1724,7 +1743,7 @@
           "name": "Palam",
           "latitude": 28.5918933,
           "longitude": 77.0828242,
-          "sequence": 4,
+          "sequence": 5,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1732,7 +1751,7 @@
           "name": "Sadar Bazaar Cantonment",
           "latitude": 28.5771509,
           "longitude": 77.1111533,
-          "sequence": 5,
+          "sequence": 6,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1740,7 +1759,7 @@
           "name": "Terminal 1 IGI Airport",
           "latitude": 28.5771509,
           "longitude": 77.1111533,
-          "sequence": 6,
+          "sequence": 7,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1748,7 +1767,7 @@
           "name": "Shankar Vihar",
           "latitude": 28.55743865,
           "longitude": 77.13966549,
-          "sequence": 7,
+          "sequence": 8,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1756,7 +1775,7 @@
           "name": "Vasant Vihar",
           "latitude": 28.56069055,
           "longitude": 77.16079073,
-          "sequence": 8,
+          "sequence": 9,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1764,7 +1783,7 @@
           "name": "Munirka",
           "latitude": 28.554886,
           "longitude": 77.1710841,
-          "sequence": 9,
+          "sequence": 10,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1772,7 +1791,7 @@
           "name": "RK Puram",
           "latitude": 28.5514261,
           "longitude": 77.1847012,
-          "sequence": 10,
+          "sequence": 11,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1780,7 +1799,7 @@
           "name": "IIT Delhi",
           "latitude": 28.544788,
           "longitude": 77.18987,
-          "sequence": 11,
+          "sequence": 12,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1788,7 +1807,7 @@
           "name": "Hauz Khas",
           "latitude": 28.5442564,
           "longitude": 77.2067072,
-          "sequence": 12,
+          "sequence": 13,
           "interchange": true,
           "interchangeLines": [
             "Magenta line",
@@ -1799,7 +1818,7 @@
           "name": "Panchsheel Park",
           "latitude": 28.5433525,
           "longitude": 77.2140757,
-          "sequence": 13,
+          "sequence": 14,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1807,7 +1826,7 @@
           "name": "Chirag Delhi",
           "latitude": 28.5381411,
           "longitude": 77.2280694,
-          "sequence": 14,
+          "sequence": 15,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1815,7 +1834,7 @@
           "name": "Greater Kailash",
           "latitude": 28.5418777,
           "longitude": 77.2384553,
-          "sequence": 15,
+          "sequence": 16,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1823,7 +1842,7 @@
           "name": "Nehru Enclave",
           "latitude": 28.5460584,
           "longitude": 77.2515057,
-          "sequence": 16,
+          "sequence": 17,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1831,7 +1850,7 @@
           "name": "Kalkaji Mandir",
           "latitude": 28.5497752,
           "longitude": 77.2606671,
-          "sequence": 17,
+          "sequence": 18,
           "interchange": true,
           "interchangeLines": [
             "Magenta line",
@@ -1842,7 +1861,7 @@
           "name": "Okhla NSIC",
           "latitude": 28.5544828,
           "longitude": 77.2648487,
-          "sequence": 18,
+          "sequence": 19,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1850,7 +1869,7 @@
           "name": "Sukhdev Vihar",
           "latitude": 28.5597477,
           "longitude": 77.2749004,
-          "sequence": 19,
+          "sequence": 20,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1858,7 +1877,7 @@
           "name": "JAMIA MILLIA ISLAMIA",
           "latitude": 28.55849025,
           "longitude": 77.28116474,
-          "sequence": 20,
+          "sequence": 21,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1866,7 +1885,7 @@
           "name": "Okhla Vihar",
           "latitude": 28.5613002,
           "longitude": 77.2919304,
-          "sequence": 21,
+          "sequence": 22,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1874,7 +1893,7 @@
           "name": "Jasola Vihar Shaheen Bagh",
           "latitude": 28.5458279,
           "longitude": 77.2966578,
-          "sequence": 22,
+          "sequence": 23,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1882,7 +1901,7 @@
           "name": "Kalindi Kunj",
           "latitude": 28.5452187,
           "longitude": 77.3059891,
-          "sequence": 23,
+          "sequence": 24,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1890,7 +1909,7 @@
           "name": "Okhla Bird Sanctuary",
           "latitude": 28.5529418,
           "longitude": 77.321595,
-          "sequence": 24,
+          "sequence": 25,
           "interchange": false,
           "interchangeLines": []
         },
@@ -1898,13 +1917,14 @@
           "name": "Botanical Garden",
           "latitude": 28.5638964,
           "longitude": 77.334332,
-          "sequence": 25,
+          "sequence": 26,
           "interchange": true,
           "interchangeLines": [
             "Blue line",
             "Magenta line"
           ]
         }
+
       ]
     },
     {
@@ -2504,10 +2524,21 @@
           "latitude": 28.55226,
           "longitude": 77.05828,
           "sequence": 6,
+          "interchange": true,
+          "interchangeLines": [
+            "Blue line"
+          ]
+        },
+        {
+          "name": "Yashobhoomi Dwarka Sector 25",
+          "latitude": 28.55645,
+          "longitude": 77.04689,
+          "sequence": 7,
           "interchange": false,
           "interchangeLines": []
         }
       ]
     }
+
   ]
 }
