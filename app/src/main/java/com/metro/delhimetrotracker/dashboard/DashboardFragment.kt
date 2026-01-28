@@ -1,37 +1,40 @@
 package com.metro.delhimetrotracker.ui.dashboard
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import kotlinx.coroutines.flow.first
-import com.google.android.material.button.MaterialButton
-import android.widget.ImageButton // Add this
+import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.work.*
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.snackbar.Snackbar
 import com.metro.delhimetrotracker.MetroTrackerApplication
 import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.model.DashboardUiState
-import com.metro.delhimetrotracker.data.model.TravelTimeContext
+import com.metro.delhimetrotracker.data.model.TripCardData
 import com.metro.delhimetrotracker.data.repository.DashboardRepository
 import com.metro.delhimetrotracker.ui.MainActivity
+import com.metro.delhimetrotracker.worker.SyncWorker
 import kotlinx.coroutines.launch
-import android.widget.Toast
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.Snackbar
-import androidx.recyclerview.widget.ItemTouchHelper
 import java.text.SimpleDateFormat
-import java.util.Locale
-import com.metro.delhimetrotracker.data.model.TripCardData
 import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
  * Dashboard Fragment - Metro Life Analytics
@@ -45,7 +48,6 @@ class DashboardFragment : Fragment() {
     // Stats Views
     private lateinit var tvTotalTrips: TextView
     private lateinit var tvTotalTime: TextView
-    //private lateinit var tvTimeContext: TextView
     private lateinit var tvCarbonSaved: TextView
     private lateinit var tvStationsVisited: TextView
     private lateinit var progressStations: LinearProgressIndicator
@@ -61,6 +63,9 @@ class DashboardFragment : Fragment() {
     private lateinit var tvEmptyState: TextView
     private lateinit var progressLoading: ProgressBar
 
+    // Swipe Refresh
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -72,12 +77,16 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // 1. Initialize Views FIRST to avoid UninitializedPropertyAccessException
         initViews(view)
+        scheduleSyncAfterTripEnd()
 
+        // 2. Setup ViewModel
         val database = (requireActivity().application as MetroTrackerApplication).database
         val repository = DashboardRepository(database)
         viewModel = DashboardViewModel(repository)
 
+        // 3. Setup Adapter
         tripAdapter = TripHistoryAdapter(object : TripHistoryAdapter.OnTripDoubleTapListener {
             override fun onTripDoubleTap(source: String, destination: String) {
                 (activity as? MainActivity)?.showStationSelectionDialog(source, destination)
@@ -86,55 +95,117 @@ class DashboardFragment : Fragment() {
                 shareTripDetails(trip)
             }
         })
+
+        // 4. Configure RecyclerView
         rvTripHistory.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = tripAdapter
         }
+
+        // 5. Setup Header & Buttons
         view.findViewById<ImageButton>(R.id.btnCloseDashboard).setOnClickListener {
             parentFragmentManager.popBackStack()
         }
-        view.findViewById<MaterialButton>(R.id.btnQuickStart).setOnClickListener {
-            val routeText = view.findViewById<TextView>(R.id.tvFrequentRoute).text.toString()
+
+        btnQuickStart.setOnClickListener {
+            val routeText = tvFrequentRoute.text.toString()
             val stations = routeText.split(" → ")
             if (stations.size == 2) {
                 (activity as? MainActivity)?.showStationSelectionDialog(stations[0], stations[1])
             }
         }
-        view.findViewById<MaterialButton>(R.id.btnReturnJourney)?.setOnClickListener {
-            val routeText = view.findViewById<TextView>(R.id.tvFrequentRoute).text.toString()
+
+        btnReturnJourney.setOnClickListener {
+            val routeText = tvFrequentRoute.text.toString()
             val stations = routeText.split(" → ")
             if (stations.size == 2) {
-                // SWAP: Destination becomes Source, Source becomes Destination
                 (activity as? MainActivity)?.showStationSelectionDialog(stations[1], stations[0])
             }
         }
+
+        // 6. Setup Swipe to Delete
         val swipeHandler = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
             override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean = false
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.adapterPosition
-                val tripCard = tripAdapter.currentList[position] // This is TripCardData
+                if (position < 0 || position >= tripAdapter.currentList.size) return
+
+                val tripCard = tripAdapter.currentList[position]
+
+                viewModel.deleteTripById(tripCard.tripId)
 
                 val snackbar = Snackbar.make(requireView(), "Trip deleted", Snackbar.LENGTH_LONG)
                 snackbar.setAction("UNDO") {
-                    tripAdapter.notifyItemChanged(position)
+                    viewModel.undoDelete(tripCard.tripId)
                 }
-
-                snackbar.addCallback(object : Snackbar.Callback() {
-                    override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
-                        if (event != DISMISS_EVENT_ACTION) {
-                            // Use the ID from your TripCardData to delete
-                            viewModel.deleteTripById(tripCard.tripId)
-                        }
-                    }
-                })
                 snackbar.show()
             }
         }
-
         ItemTouchHelper(swipeHandler).attachToRecyclerView(rvTripHistory)
+
+        // 7. Setup Swipe to Refresh
+        swipeRefreshLayout.setColorSchemeResources(
+            android.R.color.holo_blue_bright,
+            android.R.color.holo_green_light,
+            android.R.color.holo_orange_light,
+            android.R.color.holo_red_light
+        )
+
+        swipeRefreshLayout.setOnRefreshListener {
+            (activity as? MainActivity)?.performManualSync {
+                if (isAdded) { // Safety check
+                    swipeRefreshLayout.isRefreshing = false
+                }
+            } ?: run {
+                swipeRefreshLayout.isRefreshing = false
+            }
+        }
+
+        // 8. Observe Data
         observeUiState()
     }
+
+    private fun initViews(view: View) {
+        tvTotalTrips = view.findViewById(R.id.tvTotalTrips)
+        tvTotalTime = view.findViewById(R.id.tvTotalTime)
+        tvCarbonSaved = view.findViewById(R.id.tvCarbonSaved)
+        tvStationsVisited = view.findViewById(R.id.tvStationsVisited)
+        progressStations = view.findViewById(R.id.progressStations)
+
+        cardFrequentRoute = view.findViewById(R.id.cardFrequentRoute)
+        tvFrequentRoute = view.findViewById(R.id.tvFrequentRoute)
+        tvFrequentPattern = view.findViewById(R.id.tvFrequentPattern)
+
+        btnQuickStart = view.findViewById(R.id.btnQuickStart)
+        btnReturnJourney = view.findViewById(R.id.btnReturnJourney)
+
+        // FIX: Matched with XML ID
+        rvTripHistory = view.findViewById(R.id.recyclerTripHistory)
+
+        tvEmptyState = view.findViewById(R.id.tvEmptyState)
+        progressLoading = view.findViewById(R.id.progressLoading)
+
+        swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
+    }
+
+    private fun scheduleSyncAfterTripEnd() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+
+        WorkManager.getInstance(requireContext()).enqueueUniqueWork(
+            "TripSync",
+            ExistingWorkPolicy.KEEP,
+            syncRequest
+        )
+    }
+
     private fun shareTripDetails(trip: TripCardData) {
         showTripDetailsDialog(trip)
     }
@@ -147,67 +218,56 @@ class DashboardFragment : Fragment() {
 
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        // Setup header
         val tvDialogRoute = dialogView.findViewById<TextView>(R.id.tvDialogRoute)
         val tvDialogDateTime = dialogView.findViewById<TextView>(R.id.tvDialogDateTime)
         val tvDialogDuration = dialogView.findViewById<TextView>(R.id.tvDialogDuration)
         val tvDialogStations = dialogView.findViewById<TextView>(R.id.tvDialogStations)
         val rvDialogStations = dialogView.findViewById<RecyclerView>(R.id.rvDialogStations)
         val btnShareDialog = dialogView.findViewById<MaterialButton>(R.id.btnShareDialog)
-        //val btnClose = dialogView.findViewById<MaterialButton>(R.id.btnClose)
 
-        // Set trip summary
         tvDialogRoute.text = "${trip.sourceStationName} → ${trip.destinationStationName}"
         val dateFormat = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault())
         tvDialogDateTime.text = dateFormat.format(trip.startTime)
         tvDialogDuration.text = "Duration: ${trip.durationMinutes} mins"
         tvDialogStations.text = "${trip.stationCount} stations"
 
-        // Setup RecyclerView
         rvDialogStations.layoutManager = LinearLayoutManager(requireContext())
 
-        // Fetch actual trip and stations from database
         lifecycleScope.launch {
             val db = (requireActivity().application as MetroTrackerApplication).database
             val fullTrip = db.tripDao().getTripById(trip.tripId)
 
             if (fullTrip != null) {
-                // Get all station details
                 val stationIds = fullTrip.visitedStations
                 val stations = stationIds.mapNotNull { stationId ->
                     db.metroStationDao().getStationById(stationId)
                 }
 
-                // Calculate approximate times based on journey duration
                 val timePerStation = if (stations.size > 1) {
-                    (trip.durationMinutes * 60000L) / (stations.size - 1) // milliseconds per station
+                    (trip.durationMinutes * 60000L) / (stations.size - 1)
                 } else {
                     0L
                 }
 
-                val stationsWithTime = stations.mapIndexed { index, station ->
-                    StationWithTime(
+                // CHANGED: Using new class name 'TimelineItem'
+                val timelineItems = stations.mapIndexed { index, station ->
+                    TimelineItem(
                         stationName = station.stationName,
                         arrivalTime = Date(trip.startTime.time + (index * timePerStation)),
                         lineColor = station.lineColor
                     )
                 }
 
-                val adapter = StationWithTimeAdapter(stationsWithTime)
+                // CHANGED: Using new adapter name 'TimelineAdapter'
+                val adapter = TimelineAdapter(timelineItems)
                 rvDialogStations.adapter = adapter
             }
         }
 
-        // Share button click
         btnShareDialog.setOnClickListener {
             shareDetailedTripInfo(trip)
             dialog.dismiss()
         }
-
-//        // Close button
-//        btnClose.setOnClickListener {
-//            dialog.dismiss()
-//        }
 
         dialog.show()
     }
@@ -221,13 +281,11 @@ class DashboardFragment : Fragment() {
                 val dateStr = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(trip.startTime)
                 val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(trip.startTime)
 
-                // Get station names
                 val stationIds = fullTrip.visitedStations
                 val stations = stationIds.mapNotNull { stationId ->
                     db.metroStationDao().getStationById(stationId)
                 }
 
-                // Calculate times
                 val timePerStation = if (stations.size > 1) {
                     (trip.durationMinutes * 60000L) / (stations.size - 1)
                 } else {
@@ -275,27 +333,6 @@ $stationList$sosInfo
         }
     }
 
-
-    private fun initViews(view: View) {
-        tvTotalTrips = view.findViewById(R.id.tvTotalTrips)
-        tvTotalTime = view.findViewById(R.id.tvTotalTime)
-        //tvTimeContext = view.findViewById(R.id.tvTimeContext)
-        tvCarbonSaved = view.findViewById(R.id.tvCarbonSaved)
-        tvStationsVisited = view.findViewById(R.id.tvStationsVisited)
-        progressStations = view.findViewById(R.id.progressStations)
-
-        cardFrequentRoute = view.findViewById(R.id.cardFrequentRoute)
-        tvFrequentRoute = view.findViewById(R.id.tvFrequentRoute)
-        tvFrequentPattern = view.findViewById(R.id.tvFrequentPattern)
-
-        btnQuickStart = view.findViewById(R.id.btnQuickStart)
-        btnReturnJourney = view.findViewById(R.id.btnReturnJourney)
-
-        rvTripHistory = view.findViewById(R.id.rvTripHistory)
-        tvEmptyState = view.findViewById(R.id.tvEmptyState)
-        progressLoading = view.findViewById(R.id.progressLoading)
-    }
-
     private fun observeUiState() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.uiState.collect { state ->
@@ -321,6 +358,7 @@ $stationList$sosInfo
 
         if (state.frequentRoutes.isNotEmpty()) {
             updateFrequentRouteCard(state)
+            cardFrequentRoute.visibility = View.VISIBLE
         } else {
             cardFrequentRoute.visibility = View.GONE
         }
@@ -340,37 +378,89 @@ $stationList$sosInfo
 
         tvTotalTrips.text = stats.totalTrips.toString()
         tvTotalTime.text = viewModel.formatDuration(stats.totalMinutes)
-        //tvTimeContext.text = TravelTimeContext.getContextMessage(stats.totalMinutes)
         tvCarbonSaved.text = viewModel.formatCarbonSavings(stats.carbonSavedKg)
 
-        val progress = (stats.uniqueStationsVisited.toFloat() / stats.totalStationsInNetwork * 100).toInt()
+        val progress = if (stats.totalStationsInNetwork > 0) {
+            (stats.uniqueStationsVisited.toFloat() / stats.totalStationsInNetwork * 100).toInt()
+        } else 0
+
         tvStationsVisited.text = "${stats.uniqueStationsVisited} / ${stats.totalStationsInNetwork}"
         progressStations.setProgressCompat(progress, true)
     }
 
     private fun updateFrequentRouteCard(state: DashboardUiState.Success) {
+        if (state.frequentRoutes.isEmpty()) {
+            cardFrequentRoute.visibility = View.GONE
+            return
+        }
+
         val topRoute = state.frequentRoutes.first()
-
-        cardFrequentRoute.visibility = View.VISIBLE
         tvFrequentRoute.text = "${topRoute.sourceStationName} → ${topRoute.destinationStationName}"
-
         val pattern = viewModel.formatTimePeriod(topRoute.commonDayOfWeek, topRoute.commonHourOfDay)
         tvFrequentPattern.text = "Usually on $pattern • ${topRoute.tripCount} trips"
-
     }
-//
-//    private fun startQuickJourney(source: String, destination: String) {
-//        val intent = Intent(requireContext(), MainActivity::class.java).apply {
-//            putExtra("QUICK_START_SOURCE", source)
-//            putExtra("QUICK_START_DEST", destination)
-//        }
-//        startActivity(intent)
-//    }
-
 
     private fun showError(message: String) {
         progressLoading.visibility = View.GONE
         tvEmptyState.visibility = View.VISIBLE
         tvEmptyState.text = "Error: $message"
     }
+}
+
+data class TimelineItem(
+    val stationName: String,
+    val arrivalTime: java.util.Date,
+    val lineColor: String // Accepts Hex Codes (e.g., "#D32F2F")
+)
+
+/**
+ * Adapter for the Trip Details Timeline (Connect-the-Dots Style)
+ */
+class TimelineAdapter(private val items: List<TimelineItem>) :
+    RecyclerView.Adapter<TimelineAdapter.TimelineViewHolder>() {
+
+    class TimelineViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val tvStationName: TextView = view.findViewById(R.id.tvStationName)
+        val tvTime: TextView = view.findViewById(R.id.tvTime)
+
+        // These IDs must match your "Old Layout" XML
+        val viewLineTop: View = view.findViewById(R.id.viewLineTop)
+        val viewLineBottom: View = view.findViewById(R.id.viewLineBottom)
+        val ivDot: android.widget.ImageView = view.findViewById(R.id.ivDot)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TimelineViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_timeline_station, parent, false)
+        return TimelineViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: TimelineViewHolder, position: Int) {
+        val item = items[position]
+
+        // 1. Set Text
+        holder.tvStationName.text = item.stationName
+        val timeFormat = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+        holder.tvTime.text = timeFormat.format(item.arrivalTime)
+
+        // 2. Handle Lines Visibility (Hide top for first, bottom for last)
+        holder.viewLineTop.visibility = if (position == 0) View.INVISIBLE else View.VISIBLE
+        holder.viewLineBottom.visibility = if (position == items.size - 1) View.INVISIBLE else View.VISIBLE
+
+        // 3. COLOR LOGIC (Hex Code Support)
+        val color = try {
+            // Try to parse the hex code directly from DB (e.g., "#D32F2F")
+            android.graphics.Color.parseColor(item.lineColor)
+        } catch (e: Exception) {
+            // Fallback to Blue-Grey if parsing fails
+            android.graphics.Color.parseColor("#607D8B")
+        }
+
+        // 4. Apply Color to Dot and Lines
+        holder.ivDot.setColorFilter(color)
+        holder.viewLineTop.setBackgroundColor(color)
+        holder.viewLineBottom.setBackgroundColor(color)
+    }
+
+    override fun getItemCount() = items.size
 }

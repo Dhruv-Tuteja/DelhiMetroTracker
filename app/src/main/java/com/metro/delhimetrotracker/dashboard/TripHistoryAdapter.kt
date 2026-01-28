@@ -52,6 +52,9 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
         private val dateFormat = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
 
         fun bind(trip: TripCardData) {
+            itemView.alpha = 1.0f
+            itemView.translationX = 0f
+
             // Get reference to the card
             val card = itemView as MaterialCardView
 

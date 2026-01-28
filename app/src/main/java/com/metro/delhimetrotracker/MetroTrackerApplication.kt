@@ -25,7 +25,7 @@ class MetroTrackerApplication : Application() {
         Log.d(TAG, "Application starting...")
 
         // Initialize the single Room database instance
-        database = AppDatabase.getInstance(this)
+        database = AppDatabase.getDatabase(this)
 
         // Initialize the database with station data
         applicationScope.launch {

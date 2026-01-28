@@ -52,7 +52,14 @@ data class Trip(
     val sosTimestamp: Long? = null,
 
     @ColumnInfo(name = "cancellation_reason")
-    val cancellationReason: String? = null
+    val cancellationReason: String? = null,
+
+    // --- NEW SYNC METADATA ---
+    val syncState: String = "PENDING", // PENDING, SYNCED, or CONFLICT
+    val deviceId: String,              // To identify which phone uploaded this
+    val lastModified: Long = System.currentTimeMillis(), // For conflict resolution
+    val isDeleted: Boolean = false,    // "Tombstoning" for cloud deletions
+    val schemaVersion: Int = 1         // To handle future app updates
 )
 
 enum class TripStatus {
@@ -110,6 +117,7 @@ enum class DetectionMethod {
  * Entity representing metro station master data
  */
 @Entity(tableName = "metro_stations")
+@TypeConverters(Converters::class)
 data class MetroStation(
     @PrimaryKey
     val stationId: String,

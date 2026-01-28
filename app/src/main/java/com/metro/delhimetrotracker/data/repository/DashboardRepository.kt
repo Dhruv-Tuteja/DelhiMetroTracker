@@ -21,9 +21,13 @@ class DashboardRepository(private val database: AppDatabase) {
     private val tripDao = database.tripDao()
     private val stationDao = database.metroStationDao()
 
-    /**
-     * Reactive dashboard stats using Flow.combine
-     */
+    suspend fun deleteTrip(tripId: Long) {
+        // We use the "Soft Delete" method we added to the DAO
+        database.tripDao().markTripAsDeleted(tripId)
+    }
+    suspend fun restoreTrip(tripId: Long) {
+        database.tripDao().restoreTrip(tripId)
+    }
     fun getDashboardStats(): Flow<DashboardStats> {
         return combine(
             tripDao.getCompletedTripsCount(),

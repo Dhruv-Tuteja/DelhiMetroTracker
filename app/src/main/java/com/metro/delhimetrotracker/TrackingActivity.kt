@@ -38,13 +38,13 @@ import com.metro.delhimetrotracker.MetroTrackerApplication
 import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.MetroStation
 import com.metro.delhimetrotracker.service.JourneyTrackingService
-import com.metro.delhimetrotracker.utils.MetroNavigator
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import android.view.KeyEvent
-import kotlinx.coroutines.delay
 import com.metro.delhimetrotracker.data.repository.RoutePlanner
+import kotlinx.coroutines.*
+import kotlinx.coroutines.tasks.await
 
 class TrackingActivity : AppCompatActivity() {
 
@@ -76,6 +76,12 @@ class TrackingActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent) // Important!
+        if (intent.hasExtra("EXTRA_TRIP_ID")) {
+            val newId = intent.getLongExtra("EXTRA_TRIP_ID", -1L)
+            if (newId != -1L) {
+                currentTripId = newId
+            }
+        }
         if (intent.getBooleanExtra("TRIGGER_SOS", false) ||
             intent.action == "ACTION_SOS_FROM_NOTIFICATION") {
             startSosCountdown()
@@ -435,131 +441,78 @@ class TrackingActivity : AppCompatActivity() {
     }
 
     private fun executeEmergencyActions() {
-        if (emergencyContact.isEmpty()) {
-            Toast.makeText(this, "No emergency contact set", Toast.LENGTH_SHORT).show()
+        if (currentTripId == -1L) {
+            Toast.makeText(this, "Error: Invalid Trip ID", Toast.LENGTH_SHORT).show()
             return
         }
 
-        lifecycleScope.launch {
+        // 1. Get UI data on the Main Thread BEFORE switching to IO
+        val stationName = findViewById<TextView>(R.id.tvCurrentStation)?.text?.toString() ?: "Unknown Station"
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            // ==============================================================
+            // 🚨 STEP 1: FAIL-SAFE DB UPDATE (IO Thread)
+            // ==============================================================
             try {
-                // Check SMS permission FIRST
-                if (ActivityCompat.checkSelfPermission(
-                        this@TrackingActivity,
-                        Manifest.permission.SEND_SMS
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    Toast.makeText(this@TrackingActivity, "SMS permission not granted", Toast.LENGTH_LONG).show()
-                    android.util.Log.e("TrackingActivity", "SMS permission denied")
-                    return@launch
-                }
-
-                val location = if (ActivityCompat.checkSelfPermission(
-                        this@TrackingActivity,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    fusedLocationClient.lastLocation.await()
-                } else {
-                    null
-                }
-
-                val lastStation = findViewById<TextView>(R.id.tvCurrentStation)?.text?.toString() ?: "Unknown Station"
-
-                // 🔥 SAVE SOS EVENT TO DATABASE
                 val db = (application as MetroTrackerApplication).database
                 db.tripDao().markTripWithSos(
                     tripId = currentTripId,
-                    stationName = lastStation,
+                    stationName = stationName,
                     timestamp = System.currentTimeMillis()
                 )
-                android.util.Log.d("TrackingActivity", "SOS marked in database for trip $currentTripId at $lastStation")
+                android.util.Log.d("TrackingActivity", "✅ SOS marked in DB for Trip: $currentTripId")
+            } catch (e: Exception) {
+                android.util.Log.e("TrackingActivity", "❌ Failed to mark SOS in DB", e)
+            }
 
-                val mapsLink = if (location != null) {
-                    "https://maps.google.com/?q=${location.latitude},${location.longitude}"
-                } else {
-                    "Location unavailable"
+            // ==============================================================
+            // 🚨 STEP 2: SMS & CALL (Switch to Main Thread)
+            // ==============================================================
+            withContext(Dispatchers.Main) {
+                // Check Permissions
+                if (ActivityCompat.checkSelfPermission(this@TrackingActivity, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this@TrackingActivity, "⚠️ SOS Recorded, but SMS permission missing!", Toast.LENGTH_LONG).show()
+                    return@withContext
                 }
-
-                val message = """
-🆘 EMERGENCY ALERT!
-I need immediate help.
-Last Metro Station: $lastStation
-Live Location: $mapsLink
-
-- Delhi Metro Tracker SOS
-            """.trimIndent()
-
-                android.util.Log.d("TrackingActivity", "Sending SMS to: $emergencyContact")
 
                 try {
-                    val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        getSystemService(SmsManager::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        SmsManager.getDefault()
+                    // Get Location (Suspend function)
+                    val location = if (ActivityCompat.checkSelfPermission(this@TrackingActivity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        try { fusedLocationClient.lastLocation.await() } catch (e: Exception) { null }
+                    } else null
+
+                    val mapsLink = if (location != null) "https://maps.google.com/?q=${location.latitude},${location.longitude}" else "Location unavailable"
+
+                    val message = """
+                🆘 EMERGENCY ALERT!
+                I need help.
+                Metro Station: $stationName
+                Loc: $mapsLink
+                """.trimIndent()
+
+                    // Send SMS
+                    if (emergencyContact.isNotEmpty()) {
+                        val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) getSystemService(SmsManager::class.java) else SmsManager.getDefault()
+                        val parts = smsManager.divideMessage(message)
+
+                        if (parts.size > 1) {
+                            smsManager.sendMultipartTextMessage(emergencyContact, null, parts, null, null)
+                        } else {
+                            smsManager.sendTextMessage(emergencyContact, null, message, null, null)
+                        }
+                        Toast.makeText(this@TrackingActivity, "✅ SOS SMS Sent!", Toast.LENGTH_SHORT).show()
                     }
 
-                    val parts = smsManager.divideMessage(message)
-                    if (parts.size > 1) {
-                        smsManager.sendMultipartTextMessage(
-                            emergencyContact,
-                            null,
-                            parts,
-                            null,
-                            null
-                        )
-                        android.util.Log.d("TrackingActivity", "Multipart SMS sent: ${parts.size} parts")
-                    } else {
-                        smsManager.sendTextMessage(emergencyContact, null, message, null, null)
-                        android.util.Log.d("TrackingActivity", "Single SMS sent")
+                    // Make Call (After 1.5s delay)
+                    if (ActivityCompat.checkSelfPermission(this@TrackingActivity, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED && emergencyContact.isNotEmpty()) {
+                        delay(1500)
+                        startActivity(Intent(Intent.ACTION_CALL, Uri.parse("tel:$emergencyContact")))
                     }
 
-                    Toast.makeText(
-                        this@TrackingActivity,
-                        "✅ SOS SMS sent to $emergencyContact",
-                        Toast.LENGTH_LONG
-                    ).show()
-
-                } catch (smsException: Exception) {
-                    android.util.Log.e("TrackingActivity", "SMS send failed", smsException)
-                    Toast.makeText(
-                        this@TrackingActivity,
-                        "SMS failed: ${smsException.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                } catch (e: Exception) {
+                    android.util.Log.e("TrackingActivity", "SMS/Call Failed", e)
+                    Toast.makeText(this@TrackingActivity, "SMS failed: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-
-                kotlinx.coroutines.delay(1000)
-
-                if (ActivityCompat.checkSelfPermission(
-                        this@TrackingActivity,
-                        Manifest.permission.CALL_PHONE
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    try {
-                        val callIntent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$emergencyContact"))
-                        startActivity(callIntent)
-                        android.util.Log.d("TrackingActivity", "Emergency call initiated")
-                    } catch (callException: Exception) {
-                        android.util.Log.e("TrackingActivity", "Call failed", callException)
-                        Toast.makeText(
-                            this@TrackingActivity,
-                            "Call failed: ${callException.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                } else {
-                    android.util.Log.e("TrackingActivity", "Call permission denied")
-                    Toast.makeText(this@TrackingActivity, "Call permission not granted", Toast.LENGTH_LONG).show()
-                }
-
-            } catch (e: Exception) {
-                android.util.Log.e("TrackingActivity", "SOS execution failed", e)
-                Toast.makeText(
-                    this@TrackingActivity,
-                    "SOS failed: ${e.message}",
-                    Toast.LENGTH_LONG
-                ).show()
             }
         }
     }

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/tvTime"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:textSize="12sp"
+        android:textColor="#B0BEC5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/ivDot"
+        app:layout_constraintBottom_toBottomOf="@id/ivDot"
+        tools:text="10:30 AM" />
+
+    <View
+        android:id="@+id/viewLineTop"
+        android:layout_width="2dp"
+        android:layout_height="16dp"
+        app:layout_constraintStart_toStartOf="@id/ivDot"
+        app:layout_constraintEnd_toEndOf="@id/ivDot"
+        app:layout_constraintBottom_toTopOf="@id/ivDot" />
+
+    <ImageView
+        android:id="@+id/ivDot"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:layout_marginStart="16dp"
+        android:src="@drawable/circle_shape"
+        app:layout_constraintStart_toEndOf="@id/tvTime"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginVertical="4dp"/>
+
+    <View
+        android:id="@+id/viewLineBottom"
+        android:layout_width="2dp"
+        android:layout_height="16dp"
+        app:layout_constraintStart_toStartOf="@id/ivDot"
+        app:layout_constraintEnd_toEndOf="@id/ivDot"
+        app:layout_constraintTop_toBottomOf="@id/ivDot" />
+
+    <TextView
+        android:id="@+id/tvStationName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        app:layout_constraintStart_toEndOf="@id/ivDot"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/ivDot"
+        app:layout_constraintBottom_toBottomOf="@id/ivDot"
+        tools:text="Rajiv Chowk" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.metro.delhimetrotracker" />
+                  <option name="mobileSdkAppId" value="1:953972843972:android:a361c172df1f36e632f091" />
+                  <option name="projectId" value="delhi-metro-tracker" />
+                  <option name="projectNumber" value="953972843972" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

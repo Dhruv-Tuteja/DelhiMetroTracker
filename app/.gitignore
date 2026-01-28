@@ -1,1 +1,10 @@
 /build
+# Google Services (Firebase)
+google-services.json
+
+# Local configuration (SDK location, secrets)
+local.properties
+
+# Keystores (NEVER upload these!)
+*.jks
+*.keystore

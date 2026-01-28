@@ -1,6 +1,5 @@
 package com.metro.delhimetrotracker.ui
 
-import com.metro.delhimetrotracker.ui.dashboard.DashboardFragment
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -8,6 +7,7 @@ import android.content.pm.PackageManager
 import com.google.android.material.card.MaterialCardView
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.os.PowerManager
 import android.provider.ContactsContract
 import android.view.View
@@ -36,12 +36,20 @@ import com.google.android.material.appbar.MaterialToolbar
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import android.view.animation.AlphaAnimation
-import android.view.animation.Animation
 import android.widget.RadioGroup
 import com.metro.delhimetrotracker.data.repository.RoutePlanner
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var googleSignInClient: GoogleSignInClient
+    private val auth = FirebaseAuth.getInstance()
 
     // Global reference for contact picker result
     private var currentDialogPhoneField: TextInputEditText? = null
@@ -54,7 +62,19 @@ class MainActivity : AppCompatActivity() {
         if (allGranted) {
             Toast.makeText(this, "✅ Permissions granted!", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(this, "⚠️ Tracking will not work correctly without permissions.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "⚠️ Tracking will not work correctly without permissions.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val googleSignInLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            firebaseAuthWithGoogle(account.idToken!!)
+        } catch (e: ApiException) {
+            Toast.makeText(this, "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -125,6 +145,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        setupGoogleSignIn()
+        updateSignInButton()
         if (intent.getBooleanExtra("MOCK_LOCATION_DETECTED", false)) {
             showMockLocationDialog()
         }
@@ -151,13 +173,71 @@ class MainActivity : AppCompatActivity() {
         findViewById<MaterialCardView>(R.id.btnAppInfo).setOnClickListener {
             openAppGuide()
         }
+        findViewById<MaterialCardView>(R.id.btnAccount)?.setOnClickListener {
+            handleGoogleSignIn()
+        }
         val btnInfo = findViewById<MaterialCardView>(R.id.btnAppInfo)
 
         requestAllPermissions()
         checkBatteryOptimization() // Check and show battery optimization dialog
-
+        if (auth.currentUser != null) {
+            restoreTripsFromCloud()
+        }
     }
 
+    private fun setupGoogleSignIn() {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id)) // Firebase generates this automatically
+            .requestEmail()
+            .build()
+
+        googleSignInClient = GoogleSignIn.getClient(this, gso)
+    }
+    private fun firebaseAuthWithGoogle(idToken: String) {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    val user = auth.currentUser
+                    Toast.makeText(this, "✅ Signed in as ${user?.email}", Toast.LENGTH_SHORT).show()
+                    updateSignInButton() // Update UI to show "Sign Out"
+                    restoreTripsFromCloud()
+                } else {
+                    Toast.makeText(this, "Authentication failed", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+    private fun handleGoogleSignIn() {
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            // User is signed in, show sign out dialog
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Sign Out")
+                .setMessage("Are you sure you want to sign out? Your trips will stop syncing to the cloud.")
+                .setPositiveButton("Sign Out") { _, _ ->
+                    auth.signOut()
+                    googleSignInClient.signOut()
+                    Toast.makeText(this, "Signed out", Toast.LENGTH_SHORT).show()
+                    updateSignInButton()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        } else {
+            // User is not signed in, start sign in flow
+            val signInIntent = googleSignInClient.signInIntent
+            googleSignInLauncher.launch(signInIntent)
+        }
+    }
+    private fun updateSignInButton() {
+        val btnAccount = findViewById<MaterialCardView>(R.id.btnAccount)
+        val currentUser = auth.currentUser
+
+        // Update button text/icon based on sign-in state
+        // You'll need to add this button to your layout
+        btnAccount?.let {
+            // TODO: Update UI based on currentUser != null
+        }
+    }
     /**
      * Clean up any stale trips that might be stuck in IN_PROGRESS status
      * This is useful for debugging and handling app crashes
@@ -438,11 +518,18 @@ class MainActivity : AppCompatActivity() {
         routePreference: RoutePlanner.RoutePreference = RoutePlanner.RoutePreference.SHORTEST_PATH
     ) {
         lifecycleScope.launch(Dispatchers.IO) {
-            val db = (application as MetroTrackerApplication).database
-            val sourceStation = db.metroStationDao().searchStations(sourceName).first().firstOrNull()
-            val destStation = db.metroStationDao().searchStations(destName).first().firstOrNull()
+            try {
+                val db = (application as MetroTrackerApplication).database
+                val sourceStation = db.metroStationDao().searchStations(sourceName).first().firstOrNull()
+                val destStation = db.metroStationDao().searchStations(destName).first().firstOrNull()
 
-            if (sourceStation != null && destStation != null) {
+                if (sourceStation == null || destStation == null) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Station not found!", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
                 // Create Trip object and insert into database
                 val newTrip = Trip(
                     sourceStationId = sourceStation.stationId,
@@ -453,7 +540,10 @@ class MainActivity : AppCompatActivity() {
                     startTime = Date(),
                     visitedStations = listOf(sourceStation.stationId),
                     emergencyContact = phone,
-                    status = TripStatus.IN_PROGRESS
+                    status = TripStatus.IN_PROGRESS,
+                    deviceId = getOrCreateDeviceId(),
+                    syncState = "PENDING",
+                    lastModified = System.currentTimeMillis()
                 )
                 val tripId = db.tripDao().insertTrip(newTrip)
 
@@ -462,16 +552,23 @@ class MainActivity : AppCompatActivity() {
                     val serviceIntent = Intent(this@MainActivity, JourneyTrackingService::class.java).apply {
                         action = JourneyTrackingService.ACTION_START_JOURNEY
                         putExtra(JourneyTrackingService.EXTRA_TRIP_ID, tripId)
-                        putExtra("ROUTE_PREFERENCE", routePreference.name) // Pass preference to service
+                        putExtra("ROUTE_PREFERENCE", routePreference.name)
                     }
                     ContextCompat.startForegroundService(this@MainActivity, serviceIntent)
 
                     // 2. Navigate to tracking screen
                     val trackingIntent = Intent(this@MainActivity, TrackingActivity::class.java).apply {
                         putExtra("EXTRA_TRIP_ID", tripId)
-                        putExtra("ROUTE_PREFERENCE", routePreference.name) // Pass to tracking activity
+                        putExtra("ROUTE_PREFERENCE", routePreference.name)
                     }
                     startActivity(trackingIntent)
+
+                    Toast.makeText(this@MainActivity, "Trip started!", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Log.e("MainActivity", "Failed to start trip", e)
                 }
             }
         }
@@ -490,6 +587,182 @@ class MainActivity : AppCompatActivity() {
                 .setNegativeButton("Later", null)
                 .show()
         }
+    }
+    private fun getOrCreateDeviceId(): String {
+        val prefs = getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        var deviceId = prefs.getString("device_id", null)
+
+        if (deviceId == null) {
+            deviceId = java.util.UUID.randomUUID().toString()
+            prefs.edit().putString("device_id", deviceId).apply()
+        }
+        return deviceId
+    }
+
+    private fun restoreTripsFromCloud() {
+        val user = auth.currentUser ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        // Show a loading indicator if possible, or just a toast
+        Toast.makeText(this, "Restoring your trips...", Toast.LENGTH_SHORT).show()
+
+        db.collection("users")
+            .document(user.uid)
+            .collection("trips")
+            .get()
+            .addOnSuccessListener { documents ->
+                if (documents.isEmpty) return@addOnSuccessListener
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val appDb = (application as MetroTrackerApplication).database
+                    var restoreCount = 0
+
+                    for (document in documents) {
+                        try {
+                            // 1. CHECK FOR DELETION FLAG
+                            val isDeleted = document.getBoolean("isDeleted") ?: false
+
+                            // 🛑 STOP: If it's deleted in the cloud, DO NOT restore it locally.
+                            if (isDeleted) continue
+                            // Manually map Firestore fields back to Trip Entity
+                            // We do this manually to ensure Types (Long vs Int, Date vs Timestamp) match perfectly
+                            val id = document.getLong("id") ?: 0L
+                            val trip = Trip(
+                                id = id,
+                                sourceStationId = document.getString("sourceStationId") ?: "",
+                                sourceStationName = document.getString("sourceStationName") ?: "",
+                                destinationStationId = document.getString("destinationStationId") ?: "",
+                                destinationStationName = document.getString("destinationStationName") ?: "",
+                                metroLine = document.getString("metroLine") ?: "",
+                                startTime = Date(document.getLong("startTime") ?: 0L),
+                                endTime = document.getLong("endTime")?.let { Date(it) },
+                                durationMinutes = document.getLong("durationMinutes")?.toInt(),
+                                visitedStations = (document.get("visitedStations") as? List<String>) ?: emptyList(),
+                                status = TripStatus.valueOf(document.getString("status") ?: "COMPLETED"),
+                                emergencyContact = document.getString("emergencyContact") ?: "",
+
+                                // Important: Mark as SYNCED so we don't upload it again
+                                syncState = "SYNCED",
+                                deviceId = document.getString("deviceId") ?: "restored_device",
+                                lastModified = document.getLong("lastModified") ?: System.currentTimeMillis(),
+                                isDeleted = false
+                            )
+
+                            appDb.tripDao().insertTrip(trip)
+                            restoreCount++
+                        } catch (e: Exception) {
+                            Log.e("Restore", "Failed to parse trip: ${e.message}")
+                        }
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        if (restoreCount > 0) {
+                            Toast.makeText(this@MainActivity, "Restored $restoreCount trips from Cloud!", Toast.LENGTH_SHORT).show()
+                            // Refresh the UI if Dashboard is open?
+                            // Since Dashboard uses Flow<List<Trip>>, it will update automatically!
+                        }
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "Failed to restore: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+    fun performManualSync(onComplete: () -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            onComplete()
+            return
+        }
+
+        // 1. TRIGGER PUSH (Upload pending trips)
+        val workManager = androidx.work.WorkManager.getInstance(applicationContext)
+        val syncRequest = androidx.work.OneTimeWorkRequest.Builder(com.metro.delhimetrotracker.worker.SyncWorker::class.java)
+            .build()
+        workManager.enqueue(syncRequest)
+
+        // 2. TRIGGER PULL (Download new/restored trips)
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+        db.collection("users")
+            .document(user.uid)
+            .collection("trips")
+            .get()
+            .addOnSuccessListener { documents ->
+                if (documents.isEmpty) {
+                    onComplete()
+                    return@addOnSuccessListener
+                }
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val appDb = (application as MetroTrackerApplication).database
+                    var changesCount = 0
+
+                    for (document in documents) {
+                        try {
+                            val id = document.getLong("id") ?: 0L
+
+                            // 🛑 CRITICAL FIX: Check Local State First!
+                            val localTrip = appDb.tripDao().getTripById(id)
+
+                            // If we have a local version that is waiting to sync (PENDING),
+                            // TRUST LOCAL DATA. Do not overwrite it with old cloud data.
+                            if (localTrip != null && localTrip.syncState == "PENDING") {
+                                android.util.Log.d("Sync", "Skipping Cloud update for Trip $id (Local changes pending)")
+                                continue
+                            }
+
+                            // If Cloud says deleted, we respect that (unless we have local pending changes handled above)
+                            val isDeletedCloud = document.getBoolean("isDeleted") ?: false
+                            if (isDeletedCloud) {
+                                // Optional: Ensure local is also deleted if cloud says so
+                                if (localTrip != null && !localTrip.isDeleted) {
+                                    appDb.tripDao().deleteById(id)
+                                }
+                                continue
+                            }
+
+                            val trip = com.metro.delhimetrotracker.data.local.database.entities.Trip(
+                                id = id,
+                                sourceStationId = document.getString("sourceStationId") ?: "",
+                                sourceStationName = document.getString("sourceStationName") ?: "",
+                                destinationStationId = document.getString("destinationStationId") ?: "",
+                                destinationStationName = document.getString("destinationStationName") ?: "",
+                                metroLine = document.getString("metroLine") ?: "",
+                                startTime = java.util.Date(document.getLong("startTime") ?: 0L),
+                                endTime = document.getLong("endTime")?.let { java.util.Date(it) },
+                                durationMinutes = document.getLong("durationMinutes")?.toInt(),
+                                visitedStations = (document.get("visitedStations") as? List<String>) ?: emptyList(),
+                                status = com.metro.delhimetrotracker.data.local.database.entities.TripStatus.valueOf(document.getString("status") ?: "COMPLETED"),
+                                emergencyContact = document.getString("emergencyContact") ?: "",
+                                syncState = "SYNCED", // Mark as synced since it came from cloud
+                                deviceId = document.getString("deviceId") ?: "cloud",
+                                lastModified = document.getLong("lastModified") ?: System.currentTimeMillis(),
+                                isDeleted = false,
+                                hadSosAlert = document.getBoolean("hadSosAlert") ?: false,
+                                sosStationName = document.getString("sosStationName"),
+                                sosTimestamp = document.getLong("sosTimestamp")
+                            )
+
+                            appDb.tripDao().insertTrip(trip)
+                            changesCount++
+                        } catch (e: Exception) {
+                            android.util.Log.e("Sync", "Error parsing trip: ${e.message}")
+                        }
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        if (changesCount > 0) {
+                            Toast.makeText(this@MainActivity, "Sync Complete: Updated $changesCount trips", Toast.LENGTH_SHORT).show()
+                        }
+                        onComplete()
+                    }
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Sync Failed", Toast.LENGTH_SHORT).show()
+                onComplete()
+            }
     }
 }
 class AppGuideFragment : Fragment() {

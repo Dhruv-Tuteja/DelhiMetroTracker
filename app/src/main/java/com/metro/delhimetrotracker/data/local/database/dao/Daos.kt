@@ -25,73 +25,136 @@ interface TripDao {
     fun getTripByIdFlow(tripId: Long): Flow<Trip?>
 
     // Room uses the Date-to-Long TypeConverter automatically for :status parameters
-    @Query("SELECT * FROM trips WHERE status = :status ORDER BY startTime DESC")
+    @Query("SELECT * FROM trips WHERE status = :status AND isDeleted = 0 ORDER BY startTime DESC")
     fun getTripsByStatus(status: TripStatus): Flow<List<Trip>>
 
-    @Query("SELECT * FROM trips ORDER BY startTime DESC LIMIT :limit")
+    @Query("SELECT * FROM trips WHERE isDeleted = 0 ORDER BY startTime DESC LIMIT :limit")
     fun getRecentTrips(limit: Int = 10): Flow<List<Trip>>
 
-    @Query("SELECT * FROM trips ORDER BY startTime DESC")
+    @Query("SELECT * FROM trips WHERE isDeleted = 0 ORDER BY startTime DESC")
     fun getAllTrips(): Flow<List<Trip>>
 
-    @Query("SELECT * FROM trips WHERE status = 'IN_PROGRESS' LIMIT 1")
+    @Query("UPDATE trips SET isDeleted = 0, syncState = 'PENDING', lastModified = :timestamp WHERE id = :tripId")
+    suspend fun restoreTrip(tripId: Long, timestamp: Long = System.currentTimeMillis())
+
+    @Query("SELECT * FROM trips WHERE status = 'IN_PROGRESS' AND isDeleted = 0 LIMIT 1")
     suspend fun getActiveTrip(): Trip?
 
-    @Query("SELECT * FROM trips WHERE status = 'IN_PROGRESS' LIMIT 1")
+    @Query("SELECT * FROM trips WHERE status = 'IN_PROGRESS' AND isDeleted = 0 LIMIT 1")
     fun getActiveTripFlow(): Flow<Trip?>
 
     // Use Long for time parameters in raw queries if Room's auto-conversion is strict
 //    @Query("UPDATE trips SET status = :status, endTime = :endTime, durationMinutes = :duration WHERE id = :tripId")
 //    suspend fun completeTrip(tripId: Long, status: TripStatus, endTime: Long, duration: Int)
 
-    @Query("SELECT COUNT(*) FROM trips WHERE status = 'COMPLETED'")
+    @Query("SELECT COUNT(*) FROM trips WHERE status = 'COMPLETED'AND isDeleted = 0")
     fun getCompletedTripsCount(): Flow<Int>
 
-    @Query("SELECT SUM(durationMinutes) FROM trips WHERE status = 'COMPLETED'")
+    @Query("SELECT SUM(durationMinutes) FROM trips WHERE status = 'COMPLETED'AND isDeleted = 0")
     fun getTotalTravelTime(): Flow<Int?>
 
     @Query("DELETE FROM trips WHERE id = :tripId")
     suspend fun deleteTripById(tripId: Long)
 
-    @Query("UPDATE trips SET visitedStations = :visitedList WHERE id = :tripId")
-    suspend fun updateVisitedStations(tripId: Long, visitedList: List<String>)
+    @Query("""
+        UPDATE trips 
+        SET visitedStations = :visitedListJson, 
+            syncState = 'PENDING', 
+            lastModified = :updateTime 
+        WHERE id = :tripId
+    """)
+    suspend fun updateVisitedStations(
+        tripId: Long,
+        visitedListJson: String, // Changed from List<String> to String
+        updateTime: Long = System.currentTimeMillis()
+    )
 
     @Query("""
     UPDATE trips 
     SET status = :status, 
         endTime = :endTime, 
         durationMinutes = :duration,
-        destinationStationName = :finalDestination 
+        destinationStationName = :finalDestination,
+        syncState = 'PENDING',  
+        lastModified = :updateTime
     WHERE id = :tripId
-""")
+    """)
     suspend fun completeTrip(
         tripId: Long,
         status: TripStatus,
         endTime: Long,
         duration: Int,
-        finalDestination: String
+        finalDestination: String,
+        updateTime: Long = System.currentTimeMillis() // Added timestamp
     )
 
-    @Query("UPDATE trips SET had_sos_alert = 1, sos_station_name = :stationName, sos_timestamp = :timestamp WHERE id = :tripId")
-    suspend fun markTripWithSos(tripId: Long, stationName: String, timestamp: Long)
+    @Query("""
+    UPDATE trips 
+    SET had_sos_alert = 1, 
+        sos_station_name = :stationName, 
+        sos_timestamp = :timestamp,
+        syncState = 'PENDING', 
+        lastModified = :timestamp
+    WHERE id = :tripId
+""")
+    suspend fun markTripWithSos(tripId: Long, stationName: String, timestamp: Long = System.currentTimeMillis())
 
-    @Query("UPDATE trips SET status = :status, endTime = :endTime, durationMinutes = :duration, destinationStationName = :finalDestination, cancellation_reason = :reason WHERE id = :tripId")
+    @Query("""
+    UPDATE trips 
+    SET status = :status, 
+        endTime = :endTime, 
+        durationMinutes = :duration, 
+        destinationStationName = :finalDestination, 
+        cancellation_reason = :reason,
+        syncState = 'PENDING',
+        lastModified = :updateTime
+    WHERE id = :tripId
+    """)
     suspend fun completeTripWithReason(
         tripId: Long,
         status: TripStatus,
         endTime: Long,
         duration: Int,
         finalDestination: String,
-        reason: String
+        reason: String,
+        updateTime: Long = System.currentTimeMillis() // Added timestamp
     )
-    @Query("SELECT * FROM trips WHERE status IN ('IN_PROGRESS', 'ACTIVE') ORDER BY startTime DESC LIMIT 1")
+    @Query("SELECT * FROM trips WHERE status IN ('IN_PROGRESS', 'ACTIVE') AND isDeleted = 0 ORDER BY startTime DESC LIMIT 1")
     suspend fun getActiveTripIfExists(): Trip?
 
-    @Query("SELECT * FROM trips ORDER BY startTime DESC LIMIT 5")
+    @Query("SELECT * FROM trips WHERE isDeleted = 0 ORDER BY startTime DESC LIMIT 5")
     suspend fun getRecentTripsDebug(): List<Trip>
 
     @Query("SELECT * FROM station_checkpoints WHERE tripId = :tripId ORDER BY stationOrder ASC")
     suspend fun getCheckpointsForTrip(tripId: Long): List<StationCheckpoint>
+
+    @Query("SELECT * FROM trips WHERE syncState = 'PENDING'")
+    fun getPendingTrips(): Flow<List<Trip>>
+
+    /**
+     * Get all trips marked as deleted (for cloud cleanup)
+     */
+    @Query("SELECT * FROM trips WHERE isDeleted = 1")
+    fun getDeletedTrips(): Flow<List<Trip>>
+
+    /**
+     * Update sync status for a specific trip
+     */
+    @Query("UPDATE trips SET syncState = :newState, lastModified = :timestamp WHERE id = :tripId")
+    suspend fun updateSyncStatus(tripId: Long, newState: String, timestamp: Long = System.currentTimeMillis())
+
+    /**
+     * Mark a trip as deleted (tombstoning)
+     */
+    @Query("UPDATE trips SET isDeleted = 1, syncState = 'PENDING', lastModified = :timestamp WHERE id = :tripId")
+    suspend fun markTripAsDeleted(tripId: Long, timestamp: Long = System.currentTimeMillis())
+
+    /**
+     * Get trips that have conflicts (same trip modified on multiple devices)
+     */
+    @Query("SELECT * FROM trips WHERE syncState = 'CONFLICT'")
+    fun getConflictedTrips(): Flow<List<Trip>>
+
 }
 
 @Dao

@@ -1,9 +1,9 @@
 // app/build.gradle.kts
 plugins {
     alias(libs.plugins.android.application)
-    // Remove the kotlin.android alias if you enabled android.builtInKotlin=true in gradle.properties
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -65,10 +65,24 @@ android {
 }
 
 dependencies {
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    // Import the Firebase BoM (Bill of Materials)
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    // WorkManager for background sync
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    // Add dependencies for Auth and Firestore
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+
+    // Optional: Add for Cloud Sync analytics
+    implementation(libs.firebase.analytics.ktx)
+
     // Core Android (Using 2026 stable versions)
     implementation(libs.androidx.core.ktx) // Should be 1.17.0+
-    implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.androidx.appcompat)
+
     implementation(libs.androidx.constraintlayout)
     implementation("androidx.lifecycle:lifecycle-service:2.6.2")
 

@@ -6,6 +6,8 @@ import com.metro.delhimetrotracker.data.model.DashboardUiState
 import com.metro.delhimetrotracker.data.repository.DashboardRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 // Adjust the package path if your entity is in a different folder
 import com.metro.delhimetrotracker.data.local.database.entities.Trip
 import androidx.lifecycle.viewModelScope
@@ -53,6 +55,7 @@ class DashboardViewModel(
             }
         }
     }
+
 
     /**
      * Format duration into human-readable string
@@ -117,8 +120,14 @@ class DashboardViewModel(
         loadDashboardData()
     }
     fun deleteTripById(tripId: Long) {
-        viewModelScope.launch {
-            repository.deleteTripById(tripId)
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteTrip(tripId)
+        }
+    }
+    // Add this function
+    fun undoDelete(tripId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.restoreTrip(tripId)
         }
     }
 }

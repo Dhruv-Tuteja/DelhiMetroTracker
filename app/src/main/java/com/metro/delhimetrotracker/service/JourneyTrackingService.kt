@@ -31,6 +31,11 @@ import android.widget.Toast
 import android.Manifest
 import com.metro.delhimetrotracker.data.repository.RoutePlanner
 import com.metro.delhimetrotracker.ui.MainActivity
+// Add these imports at the top of JourneyTrackingService.kt
+import androidx.work.*
+import com.metro.delhimetrotracker.worker.SyncWorker
+import java.util.concurrent.TimeUnit
+import org.json.JSONArray
 /**
  * Production Foreground service for Delhi Metro Tracking.
  * Uses LifecycleService to provide easy access to lifecycleScope for DB operations.
@@ -147,7 +152,8 @@ class JourneyTrackingService : LifecycleService() {
 
                 // Now you can safely use currentTrip
                 val initialVisited = listOf(currentTrip!!.sourceStationId)
-                database.tripDao().updateVisitedStations(tripId, initialVisited)
+                val initialJson = org.json.JSONArray(initialVisited).toString()
+                database.tripDao().updateVisitedStations(tripId, initialJson)
                 currentTrip = currentTrip!!.copy(visitedStations = initialVisited)
 
                 // Load path using selected preference
@@ -193,15 +199,23 @@ class JourneyTrackingService : LifecycleService() {
     }
 
     private fun handleManualJump(targetStationId: String, timeOffset: String) {
+
+        Log.d(TAG, "Manual Jump Requested: $targetStationId, CurrentTrip is null? ${currentTrip == null}")
+
         val trip = currentTrip ?: return
         val targetIndex = stationRoute.indexOfFirst { it.stationId == targetStationId }
-        if (targetIndex == -1) return
+        if (targetIndex == -1) {
+            Log.e(TAG, "Station ID not found in current route!")
+            return
+        }
 
         val updatedVisitedList = stationRoute.subList(0, targetIndex + 1).map { it.stationId }
 
         lifecycleScope.launch(Dispatchers.IO) {
-            database.tripDao().updateVisitedStations(trip.id, updatedVisitedList)
-
+            try {
+                val jsonString = JSONArray(updatedVisitedList).toString()
+            database.tripDao().updateVisitedStations(trip.id, jsonString)
+            database.tripDao().updateSyncStatus(trip.id, "PENDING", System.currentTimeMillis())
             // 🔥 FIX: Update currentTrip in memory!
             currentTrip = currentTrip!!.copy(visitedStations = updatedVisitedList)
 
@@ -221,6 +235,10 @@ class JourneyTrackingService : LifecycleService() {
 
             if (currentStationIndex >= stationRoute.size) {
                 stopJourneyTracking()
+            }
+                Log.d(TAG, "Manual Jump Successful: Updated DB with ${updatedVisitedList.size} stations")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update manual jump in DB", e)
             }
         }
     }
@@ -269,7 +287,8 @@ class JourneyTrackingService : LifecycleService() {
                 // 🔍 DEBUG LOG
                 Log.d(TAG, "Updated visitedStations: $updatedVisited")
 
-                database.tripDao().updateVisitedStations(currentTrip!!.id, updatedVisited)
+                val updatedJson = org.json.JSONArray(updatedVisited).toString()
+                database.tripDao().updateVisitedStations(currentTrip!!.id, updatedJson)
                 currentTrip = currentTrip!!.copy(visitedStations = updatedVisited)
 
                 withContext(Dispatchers.Main) {
@@ -394,6 +413,7 @@ class JourneyTrackingService : LifecycleService() {
                     duration,
                     finalDestination = actualEndStation
                 )
+                scheduleSyncAfterTripEnd()
 
                 val visitedCount = trip.visitedStations.size - 1
                 val totalCount = stationRoute.size
@@ -463,6 +483,7 @@ class JourneyTrackingService : LifecycleService() {
 
         val sosIntent = Intent(this, TrackingActivity::class.java).apply {
             action = "ACTION_SOS_FROM_NOTIFICATION"
+            putExtra("EXTRA_TRIP_ID", currentTrip?.id ?: -1L)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val sosPendingIntent = PendingIntent.getActivity(
@@ -521,9 +542,11 @@ class JourneyTrackingService : LifecycleService() {
                 lastPressTime = now
 
                 if (pressCount >= 5) {
+                    val activeTripId = currentTrip?.id ?: -1L
                     // Launch TrackingActivity with SOS flag
                     val sosIntent = Intent(context, TrackingActivity::class.java).apply {
                         putExtra("TRIGGER_SOS", true)
+                        putExtra("EXTRA_TRIP_ID", activeTripId)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     }
                     context?.startActivity(sosIntent)
@@ -629,5 +652,21 @@ Trip tracking has been terminated. Please contact the traveler immediately.
                 stopSelf()
             }
         }
+    }
+    private fun scheduleSyncAfterTripEnd() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val syncRequest = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(constraints)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .build()
+
+        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+            "TripSync",
+            ExistingWorkPolicy.KEEP,
+            syncRequest
+        )
     }
 }

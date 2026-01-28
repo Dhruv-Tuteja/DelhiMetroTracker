@@ -8,20 +8,49 @@ import androidx.room.TypeConverters
 import com.metro.delhimetrotracker.data.local.database.converters.Converters
 import com.metro.delhimetrotracker.data.local.database.dao.*
 import com.metro.delhimetrotracker.data.local.database.entities.*
+// Add this to your AppDatabase.kt or wherever you define your Room database
 
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
+// Migration from version 1 to version 2 (adding sync fields)
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Add new sync-related columns with default values
+        database.execSQL("""
+            ALTER TABLE trips 
+            ADD COLUMN syncState TEXT NOT NULL DEFAULT 'PENDING'
+        """)
+
+        database.execSQL("""
+            ALTER TABLE trips 
+            ADD COLUMN deviceId TEXT NOT NULL DEFAULT ''
+        """)
+
+        database.execSQL("""
+            ALTER TABLE trips 
+            ADD COLUMN lastModified INTEGER NOT NULL DEFAULT 0
+        """)
+
+        database.execSQL("""
+            ALTER TABLE trips 
+            ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0
+        """)
+
+        database.execSQL("""
+            ALTER TABLE trips 
+            ADD COLUMN schemaVersion INTEGER NOT NULL DEFAULT 1
+        """)
+    }
+}
+
+// Update your database builder to include the migration:
 @Database(
-    entities = [
-        Trip::class,
-        StationCheckpoint::class,
-        MetroStation::class,
-        UserSettings::class
-    ],
-    version = 2,
-    exportSchema = false
+    entities = [Trip::class, StationCheckpoint::class, MetroStation::class, UserSettings::class],
+    version = 2, // Increment version
+    exportSchema = true
 )
-@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
-
     abstract fun tripDao(): TripDao
     abstract fun stationCheckpointDao(): StationCheckpointDao
     abstract fun metroStationDao(): MetroStationDao
@@ -30,16 +59,15 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
-        private const val DATABASE_NAME = "delhi_metro_tracker.db"
 
-        fun getInstance(context: Context): AppDatabase {
+        fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    DATABASE_NAME
+                    "metro_tracker_database"
                 )
-                    .fallbackToDestructiveMigration(true) // Fix for deprecation warning
+                    .addMigrations(MIGRATION_1_2) // Add migration here
                     .build()
                 INSTANCE = instance
                 instance

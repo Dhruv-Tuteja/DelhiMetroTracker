@@ -1,4 +1,4 @@
-package com.metro.delhimetrotracker.data.local.database.converters // Fixed package
+package com.metro.delhimetrotracker.data.local.database.converters
 
 import androidx.room.TypeConverter
 import com.google.gson.Gson
@@ -8,19 +8,27 @@ import java.util.Date
 class Converters {
     private val gson = Gson()
 
+    // Date converters
     @TypeConverter
     fun fromTimestamp(value: Long?): Date? = value?.let { Date(it) }
 
     @TypeConverter
     fun dateToTimestamp(date: Date?): Long? = date?.time
 
+    // List<String> converters
     @TypeConverter
-    fun fromStringList(value: List<String>?): String? = gson.toJson(value)
+    fun fromStringList(value: String?): List<String> {
+        if (value.isNullOrEmpty()) return emptyList()
+        return try {
+            val listType = object : TypeToken<ArrayList<String>>() {}.type
+            gson.fromJson(value, listType) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 
     @TypeConverter
-    fun toStringList(value: String?): List<String>? {
-        if (value == null) return null
-        val listType = object : TypeToken<List<String>>() {}.type
-        return gson.fromJson(value, listType)
+    fun toStringList(list: List<String>?): String {
+        return gson.toJson(list ?: emptyList<String>())
     }
 }
