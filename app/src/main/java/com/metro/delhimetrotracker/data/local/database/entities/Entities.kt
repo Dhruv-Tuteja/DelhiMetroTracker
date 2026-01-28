@@ -90,7 +90,10 @@ data class StationCheckpoint(
     // Location data (if available)
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val accuracy: Float? = null
+    val accuracy: Float? = null,
+
+    // Timestamp when this checkpoint was reached
+    val timestamp: Long? = null
 )
 
 enum class DetectionMethod {

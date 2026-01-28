@@ -6,8 +6,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import kotlinx.coroutines.flow.first
+import com.google.android.material.button.MaterialButton
 import android.widget.ImageButton // Add this
-import com.google.android.material.button.MaterialButton // Add this
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -135,45 +136,143 @@ class DashboardFragment : Fragment() {
         observeUiState()
     }
     private fun shareTripDetails(trip: TripCardData) {
-        val dateStr = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(trip.startTime)
-        val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(trip.startTime)
+        showTripDetailsDialog(trip)
+    }
 
-        val durationText = if (trip.durationMinutes == 0) {
-            "Quick ride"
-        } else {
-            "${trip.durationMinutes} mins"
+    private fun showTripDetailsDialog(trip: TripCardData) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_trip_details, null)
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        // Setup header
+        val tvDialogRoute = dialogView.findViewById<TextView>(R.id.tvDialogRoute)
+        val tvDialogDateTime = dialogView.findViewById<TextView>(R.id.tvDialogDateTime)
+        val tvDialogDuration = dialogView.findViewById<TextView>(R.id.tvDialogDuration)
+        val tvDialogStations = dialogView.findViewById<TextView>(R.id.tvDialogStations)
+        val rvDialogStations = dialogView.findViewById<RecyclerView>(R.id.rvDialogStations)
+        val btnShareDialog = dialogView.findViewById<MaterialButton>(R.id.btnShareDialog)
+        //val btnClose = dialogView.findViewById<MaterialButton>(R.id.btnClose)
+
+        // Set trip summary
+        tvDialogRoute.text = "${trip.sourceStationName} → ${trip.destinationStationName}"
+        val dateFormat = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault())
+        tvDialogDateTime.text = dateFormat.format(trip.startTime)
+        tvDialogDuration.text = "Duration: ${trip.durationMinutes} mins"
+        tvDialogStations.text = "${trip.stationCount} stations"
+
+        // Setup RecyclerView
+        rvDialogStations.layoutManager = LinearLayoutManager(requireContext())
+
+        // Fetch actual trip and stations from database
+        lifecycleScope.launch {
+            val db = (requireActivity().application as MetroTrackerApplication).database
+            val fullTrip = db.tripDao().getTripById(trip.tripId)
+
+            if (fullTrip != null) {
+                // Get all station details
+                val stationIds = fullTrip.visitedStations
+                val stations = stationIds.mapNotNull { stationId ->
+                    db.metroStationDao().getStationById(stationId)
+                }
+
+                // Calculate approximate times based on journey duration
+                val timePerStation = if (stations.size > 1) {
+                    (trip.durationMinutes * 60000L) / (stations.size - 1) // milliseconds per station
+                } else {
+                    0L
+                }
+
+                val stationsWithTime = stations.mapIndexed { index, station ->
+                    StationWithTime(
+                        stationName = station.stationName,
+                        arrivalTime = Date(trip.startTime.time + (index * timePerStation)),
+                        lineColor = station.lineColor
+                    )
+                }
+
+                val adapter = StationWithTimeAdapter(stationsWithTime)
+                rvDialogStations.adapter = adapter
+            }
         }
 
-        // Add SOS information if present
-        val sosInfo = if (trip.hadSosAlert == true && trip.sosStationName != null) {
-            val sosTime = trip.sosTimestamp?.let {
-                SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(it))
-            } ?: "Unknown time"
-            "\n🆘 SOS Alert: ${trip.sosStationName} at $sosTime"
-        } else {
-            ""
+        // Share button click
+        btnShareDialog.setOnClickListener {
+            shareDetailedTripInfo(trip)
+            dialog.dismiss()
         }
 
-        val shareBody = """
+//        // Close button
+//        btnClose.setOnClickListener {
+//            dialog.dismiss()
+//        }
+
+        dialog.show()
+    }
+
+    private fun shareDetailedTripInfo(trip: TripCardData) {
+        lifecycleScope.launch {
+            val db = (requireActivity().application as MetroTrackerApplication).database
+            val fullTrip = db.tripDao().getTripById(trip.tripId)
+
+            if (fullTrip != null) {
+                val dateStr = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(trip.startTime)
+                val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(trip.startTime)
+
+                // Get station names
+                val stationIds = fullTrip.visitedStations
+                val stations = stationIds.mapNotNull { stationId ->
+                    db.metroStationDao().getStationById(stationId)
+                }
+
+                // Calculate times
+                val timePerStation = if (stations.size > 1) {
+                    (trip.durationMinutes * 60000L) / (stations.size - 1)
+                } else {
+                    0L
+                }
+
+                val stationList = stations.mapIndexed { index, station ->
+                    val stationTime = Date(trip.startTime.time + (index * timePerStation))
+                    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                    "${index + 1}. ${station.stationName} - ${timeFormat.format(stationTime)}"
+                }.joinToString("\n")
+
+                val sosInfo = if (trip.hadSosAlert == true && trip.sosStationName != null) {
+                    val sosTime = trip.sosTimestamp?.let {
+                        SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(it))
+                    } ?: "Unknown time"
+                    "\n\n🆘 SOS Alert: ${trip.sosStationName} at $sosTime"
+                } else {
+                    ""
+                }
+
+                val shareBody = """
 My Delhi Metro Journey
 
 From: ${trip.sourceStationName}
 To: ${trip.destinationStationName}
 Date: $dateStr at $timeStr
-Duration: $durationText
-Stations covered: ${trip.stationCount}$sosInfo
+Duration: ${trip.durationMinutes} mins
+
+Journey Path:
+$stationList$sosInfo
 
 — Shared via Delhi Metro Tracker
-    """.trimIndent()
+            """.trimIndent()
 
-        val sendIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, shareBody)
-            type = "text/plain"
+                val sendIntent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    putExtra(Intent.EXTRA_TEXT, shareBody)
+                    type = "text/plain"
+                }
+
+                val shareIntent = Intent.createChooser(sendIntent, "Share Trip Details")
+                startActivity(shareIntent)
+            }
         }
-
-        val shareIntent = Intent.createChooser(sendIntent, "Share Trip")
-        startActivity(shareIntent)
     }
 
 

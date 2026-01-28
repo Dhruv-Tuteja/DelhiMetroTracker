@@ -89,6 +89,9 @@ interface TripDao {
 
     @Query("SELECT * FROM trips ORDER BY startTime DESC LIMIT 5")
     suspend fun getRecentTripsDebug(): List<Trip>
+
+    @Query("SELECT * FROM station_checkpoints WHERE tripId = :tripId ORDER BY stationOrder ASC")
+    suspend fun getCheckpointsForTrip(tripId: Long): List<StationCheckpoint>
 }
 
 @Dao
