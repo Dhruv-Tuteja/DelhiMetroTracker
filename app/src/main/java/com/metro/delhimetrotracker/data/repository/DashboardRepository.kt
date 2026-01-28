@@ -28,9 +28,19 @@ class DashboardRepository(private val database: AppDatabase) {
         return combine(
             tripDao.getCompletedTripsCount(),
             tripDao.getTotalTravelTime(),
-            getUniqueStationsFlow()
-        ) { tripCount, totalMinutes, uniqueStations ->
-            val carbonSaved = calculateCarbonSaved(tripCount)
+            getUniqueStationsFlow(),
+            tripDao.getTripsByStatus(TripStatus.COMPLETED) // Get all completed trips
+        ) { tripCount, totalMinutes, uniqueStations, completedTrips ->
+
+            // Calculate total stations from all trips
+            val totalStations = completedTrips.sumOf { it.visitedStations.size }
+
+            // Calculate total distance traveled
+            val kmPerStation = 1.2
+            val totalKm = totalStations * kmPerStation
+
+            val carbonSaved = calculateCarbonSaved(totalKm)
+
             DashboardStats(
                 totalTrips = tripCount,
                 totalMinutes = totalMinutes ?: 0,
@@ -40,6 +50,7 @@ class DashboardRepository(private val database: AppDatabase) {
             )
         }
     }
+
 
     /**
      * Get unique stations visited
@@ -53,12 +64,9 @@ class DashboardRepository(private val database: AppDatabase) {
     /**
      * Calculate CO2 saved vs car travel
      */
-    private fun calculateCarbonSaved(totalStationsVisited: Int): Double {
+    private fun calculateCarbonSaved(totalKm: Double): Double {
         // Real-world average distance between Delhi Metro stations is ~1.2km
-        val kmPerStation = 1.2
         val co2SavingsPerKm = 32.38 / 1000.0 // Specific to transit vs car offset
-
-        val totalKm = totalStationsVisited * kmPerStation
         return totalKm * co2SavingsPerKm
     }
     suspend fun deleteTripById(id: Long) {
