@@ -73,7 +73,7 @@
                 android:layout_marginBottom="8dp"/>
 
             <TextView
-                android:text="Trigger an emergency alert via:\n1. Power Button: Rapidly press 5 times (Works when locked).\n2. Notification: Tap 'SOS' in the tracking notification.\n3. In-App: Red SOS button on the tracking screen.\n\n*Alerts are instantly saved to local DB &amp; synced to Cloud."
+                android:text="Trigger an emergency alert via:\n1. Volume Down Button: Rapidly press 5 times.\n2. Notification: Tap 'SOS' in the tracking notification.\n3. In-App: Red SOS button on the tracking screen.\n\n*Alerts are instantly saved to local DB &amp; synced to Cloud."
                 android:textColor="#8A94B8"
                 android:textSize="14sp"
                 android:layout_width="match_parent"

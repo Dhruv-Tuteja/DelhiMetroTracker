@@ -45,6 +45,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.firestore.FirebaseFirestore
+import android.net.Uri
 
 class MainActivity : AppCompatActivity() {
 
@@ -607,13 +608,21 @@ class MainActivity : AppCompatActivity() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         if (!pm.isIgnoringBatteryOptimizations(packageName)) {
             MaterialAlertDialogBuilder(this)
-                .setTitle("Background Tracking Issue")
-                .setMessage("To ensure you receive alerts even when your screen is off, please set battery usage to 'Unrestricted'.")
-                .setPositiveButton("Settings") { _, _ ->
-                    val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                    startActivity(intent)
+                .setTitle("Allow Background Tracking")
+                .setMessage("To receive SOS and Station alerts while the screen is off, the app needs to run in the background.\n\nPlease tap 'Allow' in the next popup.")
+                .setPositiveButton("OK") { _, _ ->
+                    try {
+                        // This intent opens a specific "Allow / Deny" dialog for YOUR app
+                        val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        intent.data = Uri.parse("package:$packageName")
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        // Fallback to the general settings list if the direct dialog fails
+                        val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        startActivity(intent)
+                    }
                 }
-                .setNegativeButton("Later", null)
+                .setNegativeButton("No Thanks", null)
                 .show()
         }
     }
