@@ -200,8 +200,20 @@ class MainActivity : AppCompatActivity() {
                 if (task.isSuccessful) {
                     val user = auth.currentUser
                     Toast.makeText(this, "✅ Signed in as ${user?.email}", Toast.LENGTH_SHORT).show()
-                    updateSignInButton() // Update UI to show "Sign Out"
-                    restoreTripsFromCloud()
+                    updateSignInButton()
+
+                    // 🛑 CRITICAL FIX: Wipe "Guest" trips before loading "User" trips
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val db = (application as MetroTrackerApplication).database
+
+                        // Delete local "Guest" trips so they don't mix with the new account
+                        db.tripDao().deleteAllTrips()
+
+                        // Now download the real user's data
+                        withContext(Dispatchers.Main) {
+                            restoreTripsFromCloud()
+                        }
+                    }
                 } else {
                     Toast.makeText(this, "Authentication failed", Toast.LENGTH_SHORT).show()
                 }
