@@ -129,7 +129,8 @@ data class MetroStation(
     val longitude: Double,
     val sequenceNumber: Int,
     val isInterchange: Boolean = false,
-    val interchangeLines: List<String>? = null // Uses the new List converter
+    val interchangeLines: List<String>? = null, // Uses the new List converter
+    val gtfs_stop_id: String? = null
 )
 
 /**
@@ -166,4 +167,24 @@ data class UserSettings(
     // UI preferences
     val darkMode: Boolean = false,
     val language: String = "en"
+)
+
+@Entity(
+    tableName = "stop_times",
+    // Adding indices makes the "Next Train" query instant
+    indices = [
+        androidx.room.Index(value = ["stop_id"]),
+        androidx.room.Index(value = ["trip_id"]),
+        androidx.room.Index(value = ["arrival_time"])
+    ]
+)
+data class StopTime(
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+
+    val trip_id: String,
+    val arrival_time: String,   // Format: "HH:MM:SS"
+    val departure_time: String,
+    val stop_id: String,        // Links to MetroStation.gtfs_stop_id
+    val stop_sequence: Int
 )

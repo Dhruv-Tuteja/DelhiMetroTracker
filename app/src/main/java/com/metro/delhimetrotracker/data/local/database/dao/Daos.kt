@@ -216,6 +216,7 @@ interface MetroStationDao {
         OR (stationName = :name AND stationId != :currentId)
     """)
     suspend fun getAdjacentStations(line: String, seq: Int, name: String, currentId: String): List<MetroStation>
+
 }
 @Dao
 interface UserSettingsDao {
@@ -239,4 +240,32 @@ interface UserSettingsDao {
 
     @Query("UPDATE user_settings SET vibrationEnabled = :enabled WHERE id = 1")
     suspend fun setVibrationEnabled(enabled: Boolean)
+}
+
+// ... existing UserSettingsDao interface ...
+
+@Dao
+interface StopTimeDao {
+    // 1. Efficient Batch Insert (for loading the text file)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(stopTimes: List<StopTime>)
+
+    // 2. Check if data exists (to avoid re-loading on every launch)
+    @Query("SELECT COUNT(*) FROM stop_times")
+    suspend fun getCount(): Int
+
+    /**
+     * 3. THE MAGIC QUERY: "Get Next Trains"
+     * Finds trains arriving at THIS station (stop_id)
+     * AFTER the current time (arrival_time > :time)
+     * Ordered by soonest first.
+     */
+    @Query("""
+        SELECT * FROM stop_times 
+        WHERE stop_id = :gtfsStopId 
+        AND arrival_time > :currentTime 
+        ORDER BY arrival_time ASC 
+        LIMIT :limit
+    """)
+    suspend fun getNextTrains(gtfsStopId: String, currentTime: String, limit: Int): List<StopTime>
 }

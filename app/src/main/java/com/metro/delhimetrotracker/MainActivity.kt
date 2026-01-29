@@ -46,6 +46,7 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.firestore.FirebaseFirestore
 import android.net.Uri
+import com.metro.delhimetrotracker.data.repository.GtfsLoader
 
 class MainActivity : AppCompatActivity() {
 
@@ -151,6 +152,7 @@ class MainActivity : AppCompatActivity() {
         if (intent.getBooleanExtra("MOCK_LOCATION_DETECTED", false)) {
             showMockLocationDialog()
         }
+        val appDb = DatabaseInitializer.getDatabase(this)
 
         // 1. Initialize Database (Load stations from Assets)
         lifecycleScope.launch {
@@ -160,6 +162,9 @@ class MainActivity : AppCompatActivity() {
             // Optional: Clean up any stale trips on first app launch (for debugging)
             // You can comment this out in production
             cleanupStaleTrips()
+
+            val loader = GtfsLoader(applicationContext, appDb)
+            loader.loadStopTimesIfNeeded()
 
             Toast.makeText(this@MainActivity, "Metro data ready!", Toast.LENGTH_SHORT).show()
         }
