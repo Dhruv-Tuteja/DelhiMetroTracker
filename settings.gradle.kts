@@ -15,6 +15,8 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven { url = uri("https://jitpack.io") } // <--- Add this
+        maven { url = uri("https://repo.osgeo.org/repository/release/") }
     }
 }
 
@@ -23,10 +25,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // JitPack is still useful for specific metro-related map or utility libraries
-        maven { url = uri("https://jitpack.io") }
+        maven { url = uri("https://jitpack.io") } // <--- Add this
+        maven { url = uri("https://repo.osgeo.org/repository/release/") }
     }
 }
-
 rootProject.name = "DelhiMetroTracker"
 include(":app")

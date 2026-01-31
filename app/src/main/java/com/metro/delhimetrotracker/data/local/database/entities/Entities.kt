@@ -181,10 +181,12 @@ data class UserSettings(
 data class StopTime(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-
+    val arrival_minutes: Int,
     val trip_id: String,
     val arrival_time: String,   // Format: "HH:MM:SS"
     val departure_time: String,
     val stop_id: String,        // Links to MetroStation.gtfs_stop_id
-    val stop_sequence: Int
+    val stop_sequence: Int,
+    val pickup_type: Int = 0,
+
 )

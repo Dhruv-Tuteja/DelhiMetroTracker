@@ -4,11 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     id("com.google.gms.google-services")
+    // REMOVED: id("com.squareup.wire") -> We are using Manual Mode below
 }
+
+// 1. Create a configuration to download the compiler tool manually
+val wireCompiler by configurations.creating
 
 android {
     namespace = "com.metro.delhimetrotracker"
-    // AGP 9.0 supports up to API 36
     compileSdk = 36
 
     defaultConfig {
@@ -17,22 +20,14 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        vectorDrawables {
-            useSupportLibrary = true
-        }
+        vectorDrawables.useSupportLibrary = true
     }
 
-    // New DSL for AGP 9.0
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
@@ -41,8 +36,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // This block is often redundant in AGP 9.0 with builtInKotlin,
-    // but kept here for specific JVM targeting.
     kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
@@ -54,83 +47,96 @@ android {
         compose = true
     }
 
-    // Kotlin 2.3.0 and the new Compose plugin handle this automatically;
-    // the old composeOptions block can be removed.
-
     packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    }
+
+    // 2. Tell Android Studio where to find the generated code
+    sourceSets {
+        getByName("main") {
+            val wireDir = layout.buildDirectory.dir("generated/source/wire").get().asFile
+            // Tell both Java and Kotlin compilers where the files are
+            java.srcDir(wireDir)
+            kotlin.srcDir(wireDir)
         }
     }
 }
 
 dependencies {
+    // 3. Add the Compiler Tool (Used by the task below)
+    wireCompiler("com.squareup.wire:wire-compiler:5.0.0")
+
+    // 4. The Runtime (Required for the generated code to work)
+    implementation("com.squareup.wire:wire-runtime:5.0.0")
+
+    // ... YOUR EXISTING DEPENDENCIES ...
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
-    // Import the Firebase BoM (Bill of Materials)
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-    // WorkManager for background sync
     implementation("androidx.work:work-runtime-ktx:2.9.1")
-    // Add dependencies for Auth and Firestore
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.android.gms:play-services-auth:20.7.0")
     implementation("com.google.firebase:firebase-firestore-ktx")
-
-    // Optional: Add for Cloud Sync analytics
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation(libs.firebase.analytics.ktx)
-
-    // Core Android (Using 2026 stable versions)
-    implementation(libs.androidx.core.ktx) // Should be 1.17.0+
+    implementation(libs.androidx.core.ktx)
     implementation(libs.material)
     implementation(libs.androidx.appcompat)
-
     implementation(libs.androidx.constraintlayout)
     implementation("androidx.lifecycle:lifecycle-service:2.6.2")
-
-    // Lifecycle (2.9.0 is common for 2026 stacks)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.lifecycle.service)
 
-    // Room Database
-    // Room 2.7.0 is the 2026 stable standard
     val roomVersion = "2.7.0"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-
-    // Coroutines (1.10.0+ for 2026)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.1")
-
-    // Google Play Services (v26.02 is current for Jan 2026)
-    //implementation("com.google.android.gms:play-services-location:26.0.2")
     implementation(libs.google.play.services.location)
-
-    // Jetpack Compose (Compose 1.8.0 / BOM 2026.01.00)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.activity.compose)
-
-
-    // Navigation (Navigation 3 is now stable and recommended)
     implementation("androidx.navigation:navigation-compose:2.9.0")
-
-    // DataStore (1.2.0 stable)
     implementation("androidx.datastore:datastore-preferences:1.2.0")
-
-    // Gson (2.13.2 is latest stable)
     implementation("com.google.code.gson:gson:2.13.2")
-
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
-    // Testing
     testImplementation(libs.junit)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.1")
     testImplementation("androidx.room:room-testing:$roomVersion")
+}
+
+// 5. THE MANUAL GENERATION TASK
+val generateGtfsProtos by tasks.registering(JavaExec::class) {
+    group = "build"
+    description = "Generates Kotlin classes from GTFS Realtime protos"
+
+    // Use the compiler downloaded in dependencies
+    classpath = wireCompiler
+    mainClass.set("com.squareup.wire.WireCompiler")
+
+    // Output directory
+    val outputDir = layout.buildDirectory.dir("generated/source/wire").get().asFile
+
+    // Arguments for the compiler
+    args = listOf(
+        "--proto_path=src/main/proto",       // Input folder
+        "--kotlin_out=$outputDir",           // Output folder
+        "gtfs-realtime.proto"                // Specific file to compile
+    )
+
+    // Create directory before running
+    doFirst {
+        outputDir.mkdirs()
+    }
+}
+
+// 6. Force generation before compilation
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    dependsOn(generateGtfsProtos)
 }

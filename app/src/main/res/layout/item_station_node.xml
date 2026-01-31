@@ -8,7 +8,6 @@
     android:paddingStart="20dp"
     android:paddingEnd="20dp">
 
-    <!-- Station Node Container (now a direct child for constraints) -->
     <FrameLayout
         android:id="@+id/nodeContainer"
         android:layout_width="wrap_content"
@@ -18,24 +17,22 @@
         app:layout_constraintBottom_toBottomOf="@id/stationCard"
         app:layout_constraintStart_toStartOf="parent">
 
-        <!-- Outer Glow (for current station) -->
         <View
             android:id="@+id/nodeGlow"
             android:layout_width="28dp"
             android:layout_height="28dp"
             android:visibility="invisible"
-            android:layout_gravity="center"/>
-
-        <!-- Main Node Dot -->
+            android:layout_gravity="center"
+            android:background="@drawable/shape_glow_circle" />
         <View
             android:id="@+id/nodeDot"
             android:layout_width="16dp"
             android:layout_height="16dp"
-            android:layout_gravity="center"/>
+            android:layout_gravity="center"
+            android:background="@drawable/shape_circle" />
 
     </FrameLayout>
 
-    <!-- Top Connecting Line -->
     <View
         android:id="@+id/lineTop"
         android:layout_width="3dp"
@@ -46,7 +43,6 @@
         app:layout_constraintStart_toStartOf="@id/nodeContainer"
         app:layout_constraintEnd_toEndOf="@id/nodeContainer" />
 
-    <!-- Bottom Connecting Line -->
     <View
         android:id="@+id/lineBottom"
         android:layout_width="3dp"
@@ -57,7 +53,6 @@
         app:layout_constraintStart_toStartOf="@id/nodeContainer"
         app:layout_constraintEnd_toEndOf="@id/nodeContainer" />
 
-    <!-- Station Info Card -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/stationCard"
         android:layout_width="0dp"
@@ -83,19 +78,35 @@
             android:paddingTop="12dp"
             android:paddingBottom="12dp">
 
-            <!-- Station Name -->
-            <TextView
-                android:id="@+id/tvStationName"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:letterSpacing="-0.01"
-                android:includeFontPadding="false"
-                tools:text="Huda City Centre"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-            <!-- Station Status Badge -->
+                <TextView
+                    android:id="@+id/tvStationName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="-0.01"
+                    android:includeFontPadding="false"
+                    tools:text="Huda City Centre"/>
+
+                <TextView
+                    android:id="@+id/tvExpectedTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#4CAF50"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="visible"
+                    tools:text="10:15 AM"/>
+            </LinearLayout>
+
             <TextView
                 android:id="@+id/tvStationStatus"
                 android:layout_width="wrap_content"

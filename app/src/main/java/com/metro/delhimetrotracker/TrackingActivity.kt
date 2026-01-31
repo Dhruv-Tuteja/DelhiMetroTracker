@@ -5,6 +5,7 @@ import android.animation.ArgbEvaluator
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.Activity
+// UPDATE THIS IMPORT:
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -45,6 +46,18 @@ import android.view.KeyEvent
 import com.metro.delhimetrotracker.data.repository.RoutePlanner
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
+import com.metro.delhimetrotracker.data.repository.MetroRepository
+import kotlinx.coroutines.Job
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
+import android.util.Log
+import java.util.Calendar
+import com.metro.delhimetrotracker.data.repository.GtfsLoader
+//import okhttp3.OkHttpClient
+//import okhttp3.Request
+//import com.google.transit.realtime.VehiclePosition
+//import com.google.transit.realtime.FeedMessage
 
 class TrackingActivity : AppCompatActivity() {
 
@@ -55,6 +68,8 @@ class TrackingActivity : AppCompatActivity() {
     // Speed tracking variables
     private var locationCallback: com.google.android.gms.location.LocationCallback? = null
     private var previousLocation: android.location.Location? = null
+
+    private var departureTime: Long = 0
 
 
     // Store journey data for manual update dialog
@@ -70,6 +85,11 @@ class TrackingActivity : AppCompatActivity() {
     private var powerButtonPressCount = 0
     private var lastPowerButtonPressTime = 0L
     private val POWER_BUTTON_TIMEOUT = 3000L // 3 seconds window
+
+    private var scheduleJob: Job? = null
+    private lateinit var repository: MetroRepository
+    private var lastFallbackTime: String? = null
+
 
 
 
@@ -93,7 +113,8 @@ class TrackingActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_tracking)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
+        //testGtfsRealtimeApi()
+        //testGtfsRealtimeParsing()
         // Start speed tracking
         setupSpeedTracking()
 
@@ -137,6 +158,27 @@ class TrackingActivity : AppCompatActivity() {
             RoutePlanner.RoutePreference.SHORTEST_PATH
         }
         val db = (application as MetroTrackerApplication).database
+        repository = MetroRepository(db)
+        lifecycleScope.launch(Dispatchers.IO) {
+            Log.d("DEBUG_GTFS", "Attempting to trigger loader...")
+            val loader = GtfsLoader(applicationContext, db)
+            loader.loadStopTimesIfNeeded()
+
+            // ===== ADD THIS =====
+            val count = db.stopTimeDao().getCount()
+            Log.d("GTFS_TEST", "Total rows: $count")
+
+            val allStops = db.stopTimeDao().getAllStopIds()
+            if (allStops.isNotEmpty()) {
+                val gtfsId = allStops.first()
+                val samples = db.stopTimeDao().getAnySampleTrains(gtfsId)
+                samples.take(5).forEach {
+                    Log.d("GTFS_TEST", "${it.arrival_time} -> ${it.arrival_minutes}")
+                }
+            }
+            // ====================
+        }
+
 
         val btnStop = findViewById<Button>(R.id.btnStopJourney)
         btnStop.setOnClickListener {
@@ -156,6 +198,7 @@ class TrackingActivity : AppCompatActivity() {
             db.tripDao().getTripByIdFlow(tripId).collectLatest { trip ->
                 trip?.let { activeTrip ->
                     // Store emergency contact
+                    scheduleJob?.cancel()
                     emergencyContact = activeTrip.emergencyContact
                     val routePlanner = RoutePlanner(db)
                     val route = routePlanner.findRoute(
@@ -173,8 +216,10 @@ class TrackingActivity : AppCompatActivity() {
                         rvPath.adapter = adapter
                     }
 
-                    val nextStation = currentJourneyPath.find { it.stationId == (activeTrip.visitedStations.lastOrNull()) }
-                    findViewById<TextView>(R.id.tvCurrentStation).text = nextStation?.stationName ?: activeTrip.sourceStationName
+                    val nextStation =
+                        currentJourneyPath.find { it.stationId == (activeTrip.visitedStations.lastOrNull()) }
+                    findViewById<TextView>(R.id.tvCurrentStation).text =
+                        nextStation?.stationName ?: activeTrip.sourceStationName
 
                     if (currentJourneyPath.isNotEmpty()) {
                         val totalStations = currentJourneyPath.size
@@ -187,8 +232,10 @@ class TrackingActivity : AppCompatActivity() {
                         findViewById<TextView>(R.id.tvProgressPercent).text = progressText
 
                         val minutesRemaining = stationsLeft * 2
-                        val estTimeText = if (minutesRemaining > 0) "~$minutesRemaining mins left" else "Arriving"
-                        findViewById<TextView>(R.id.tvCurrentStationLabel).text = "EST. TIME: $estTimeText"
+                        val estTimeText =
+                            if (minutesRemaining > 0) "~$minutesRemaining mins left" else "Arriving"
+                        findViewById<TextView>(R.id.tvCurrentStationLabel).text =
+                            "EST. TIME: $estTimeText"
 
                         val progress = when {
                             currentStationIndex == 0 -> 0f
@@ -205,13 +252,112 @@ class TrackingActivity : AppCompatActivity() {
 
                     val currentId = activeTrip.visitedStations.lastOrNull()
                     if (currentId != null && activeTrip.visitedStations.size > 1) {
-                        val penultimateId = if (currentJourneyPath.size >= 2) currentJourneyPath[currentJourneyPath.size - 2].stationId else null
+                        val penultimateId =
+                            if (currentJourneyPath.size >= 2) currentJourneyPath[currentJourneyPath.size - 2].stationId else null
                         if (currentId == activeTrip.destinationStationId || currentId == penultimateId) {
                             triggerTripleVibration()
                         }
                     }
+                    val testStation = repository.getStationById(activeTrip.sourceStationId)
+                    // Add this in onCreate or before the schedule loop starts
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val station = repository.getStationById(activeTrip.sourceStationId)
+                        val gtfsId = station?.gtfs_stop_id
+
+                        Log.d("METRO_SCHEDULE_DEBUG", "[DEBUG] Testing GTFS data for station: ${station?.stationName}")
+                        Log.d("METRO_SCHEDULE_DEBUG", "[DEBUG] GTFS ID: $gtfsId")
+
+                        if (gtfsId != null) {
+                            val anySampleTrains = db.stopTimeDao().getAnySampleTrains(gtfsId)
+                            Log.d("METRO_SCHEDULE_DEBUG", "[DEBUG] Sample trains for this station: ${anySampleTrains.size}")
+                            anySampleTrains.take(5).forEach {
+                                Log.d("METRO_SCHEDULE_DEBUG", "[DEBUG]    ${it.trip_id} at ${it.arrival_time}")
+                            }
+                        }
+                    }
+
+                    scheduleJob = launch {
+                        while (isActive) {
+                            // 1. Get current station ID
+                            val currentStationId = activeTrip.visitedStations.lastOrNull() ?: activeTrip.sourceStationId
+
+                            // 2. Get current time in SECONDS for better precision
+                            val cal = Calendar.getInstance()
+                            val nowSeconds = (cal.get(Calendar.HOUR_OF_DAY) * 3600) + (cal.get(Calendar.MINUTE) * 60) + cal.get(Calendar.SECOND)
+                            val nowMinutes = nowSeconds / 60
+
+                            // 3. Get next station for directional search
+                            val nextStationIndex = activeTrip.visitedStations.size
+                            val allStationsInPath = journeyPath
+                            val nextStationInRoute = if (nextStationIndex < allStationsInPath.size) {
+                                allStationsInPath[nextStationIndex]
+                            } else null
+
+                            // 4. Query next train (with direction if available)
+                            val nextTrain = repository.getNextTrainForStation(
+                                currentStationId,
+                                nextStationInRoute?.stationId,
+                                nowMinutes
+                            )
+
+                            // 5. Debug logging
+                            val debugStation = repository.getStationById(currentStationId)
+                            Log.d("METRO_SIMPLE_LOGIC", "━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                            Log.d("METRO_SIMPLE_LOGIC", "📍 Current Station: ${debugStation?.stationName}")
+                            Log.d("METRO_SIMPLE_LOGIC", "➡️  Next Station: ${nextStationInRoute?.stationName ?: "Destination"}")
+                            Log.d("METRO_SIMPLE_LOGIC", "⏰ Current Time: ${formatSeconds(nowSeconds)}")
+                            Log.d("METRO_SIMPLE_LOGIC", "🚆 Next Train: ${nextTrain?.arrival_time ?: "None"} (Trip: ${nextTrain?.trip_id ?: "N/A"})")
+
+                            // 6. Update UI
+                            withContext(Dispatchers.Main) {
+                                if (nextTrain != null) {
+                                    // Show next train
+                                    adapter.updateBaseTime(nextTrain.arrival_time)
+
+                                    findViewById<TextView>(R.id.tvNextTrainSchedule)?.apply {
+                                        text = "Next Train: ${formatTime(nextTrain.arrival_time)}"
+                                        setTextColor(Color.parseColor("#4CAF50")) // Green
+                                        visibility = View.VISIBLE
+                                    }
+
+                                    Log.d("METRO_SIMPLE_LOGIC", "✅ Displaying: Next Train at ${nextTrain.arrival_time}")
+                                    Log.d("METRO_SIMPLE_LOGIC", "📤 Sent to adapter: ${nextTrain.arrival_time}")
+                                } else {
+                                    // No trains found
+                                    adapter.updateBaseTime(null)
+
+                                    findViewById<TextView>(R.id.tvNextTrainSchedule)?.apply {
+                                        text = "No trains scheduled"
+                                        setTextColor(Color.parseColor("#FF5252")) // Red
+                                        visibility = View.VISIBLE
+                                    }
+
+                                    Log.d("METRO_SIMPLE_LOGIC", "⚠️ No trains found for this station")
+                                }
+                                Log.d("METRO_SIMPLE_LOGIC", "━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                            }
+
+                            delay(45000) // Check every 45 seconds
+                        }
+                    }
                 }
             }
+        }
+    }
+    private fun formatSeconds(seconds: Int): String {
+        val hours = (seconds / 3600) % 24
+        val mins = (seconds % 3600) / 60
+        val secs = seconds % 60
+        return String.format("%02d:%02d:%02d", hours, mins, secs)
+    }
+    private fun formatTime(timeStr: String): String {
+        return try {
+            val inputFormat = SimpleDateFormat("HH:mm:ss", Locale.US)
+            val outputFormat = SimpleDateFormat("h:mm a", Locale.US)
+            val date = inputFormat.parse(timeStr)
+            outputFormat.format(date ?: return timeStr)
+        } catch (e: Exception) {
+            timeStr // Return original if parsing fails
         }
     }
     private fun checkAndRequestPermissions() {
@@ -258,7 +404,7 @@ class TrackingActivity : AppCompatActivity() {
     }
     private fun triggerTripleVibration() {
         val v = getSystemService(VIBRATOR_SERVICE) as Vibrator
-        val pattern = longArrayOf(0, 400, 200, 400, 200, 400)
+        val pattern = longArrayOf(0, 400, 150, 400, 150, 400, 150, 400, 150, 400, 150, 400, 150, 400, 150, 400)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             v.vibrate(VibrationEffect.createWaveform(pattern, -1))
         } else {
@@ -616,11 +762,124 @@ class TrackingActivity : AppCompatActivity() {
         previousLocation = currentLocation
         return 0f
     }
+    private fun addMinutesToTime(timeStr: String?, minutesToAdd: Int): String {
+        if (timeStr.isNullOrEmpty()) return "--:--"
 
+        // 1. Split "08:10" into 8 and 10
+        val parts = timeStr.split(":")
+        if (parts.size < 2) return timeStr
+
+        var hours = parts[0].trim().toInt()
+        var minutes = parts[1].trim().toInt()
+
+        // 2. Add the 2 minutes
+        minutes += minutesToAdd
+
+        // 3. Handle overflow (e.g., 8:59 + 2 becomes 9:01)
+        if (minutes >= 60) {
+            hours += 1
+            minutes -= 60
+        }
+
+        // 4. Format back to "HH:mm"
+        return String.format("%02d:%02d", hours, minutes)
+    }
     /**
      * Update speed TextView
      */
     private fun updateSpeedDisplay(speedKmh: Float) {
         findViewById<TextView>(R.id.tvSpeedValue)?.text = String.format("%.0f", speedKmh.coerceAtLeast(0f))
+    }
+
+    // In TrackingActivity.kt
+
+    private fun isUserAtStation(station: MetroStation, userLocation: android.location.Location?): Boolean {
+        if (userLocation == null) return true // Assume at station if no GPS (safer fallback)
+
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(
+            userLocation.latitude, userLocation.longitude,
+            station.latitude, station.longitude,
+            results
+        )
+        // Return true if within 200 meters
+        return results[0] <= 200.0
+    }
+    // Place this in your TrackingActivity or create a test activity
+    private fun testGtfsRealtimeApi() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val urls = listOf(
+                    "https://otd.delhi.gov.in/api/realtime/VehiclePositions.pb?key=Ex9XdpVhKiJT426Q6ttKZx4E4aFkbGL2",
+                    "https://data.delhi.gov.in/api/realtime/VehiclePositions.pb?key=Ex9XdpVhKiJT426Q6ttKZx4E4aFkbGL2"
+                )
+
+                for (url in urls) {
+                    android.util.Log.d("GTFS_TEST", "Testing URL: $url")
+
+                    try {
+                        val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                        connection.requestMethod = "GET"
+                        connection.connectTimeout = 10000
+                        connection.readTimeout = 10000
+
+                        val responseCode = connection.responseCode
+                        android.util.Log.d("GTFS_TEST", "Response Code: $responseCode")
+
+                        if (responseCode == 200) {
+                            val bytes = connection.inputStream.readBytes()
+                            android.util.Log.d("GTFS_TEST", "✅ SUCCESS! Received ${bytes.size} bytes")
+
+                            withContext(Dispatchers.Main) {
+                                android.widget.Toast.makeText(this@TrackingActivity, "API Works! ${bytes.size} bytes", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                            break
+                        } else {
+                            val error = connection.errorStream?.bufferedReader()?.readText()
+                            android.util.Log.e("GTFS_TEST", "Failed: $error")
+                        }
+
+                        connection.disconnect()
+
+                    } catch (e: Exception) {
+                        android.util.Log.e("GTFS_TEST", "Error: ${e.message}", e)
+                    }
+                }
+
+            } catch (e: Exception) {
+                android.util.Log.e("GTFS_TEST", "Error: ${e.message}", e)
+            }
+        }
+    }
+    private fun testGtfsRealtimeParsing() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val repo = com.metro.delhimetrotracker.data.repository.GtfsRealtimeRepository()
+                val vehicles = repo.getVehiclePositions()
+
+                // SWITCH TO MAIN THREAD TO SHOW TOAST
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(
+                        this@TrackingActivity,
+                        "Fetched: ${vehicles.size} vehicles",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
+
+                Log.d("GTFS_REALTIME", "━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                Log.d("GTFS_REALTIME", "Total vehicles: ${vehicles.size}")
+
+                vehicles.take(3).forEach { vehicle ->
+                    Log.d("GTFS_REALTIME", "VRN: ${vehicle.vehicle?.label}") // VRN is usually in 'label' or 'license_plate'
+                    Log.d("GTFS_REALTIME", "Lat: ${vehicle.position?.latitude}")
+                    Log.d("GTFS_REALTIME", "Lng: ${vehicle.position?.longitude}")
+                    Log.d("GTFS_REALTIME", "-----------------------------")
+                }
+
+            } catch (e: Exception) {
+                Log.e("GTFS_REALTIME", "CRASH: ${e.message}")
+                e.printStackTrace()
+            }
+        }
     }
 }

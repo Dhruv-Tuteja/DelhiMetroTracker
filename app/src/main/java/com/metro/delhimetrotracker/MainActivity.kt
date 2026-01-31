@@ -1,11 +1,16 @@
 package com.metro.delhimetrotracker.ui
 
+
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.view.animation.AnimationUtils
 import com.google.android.material.card.MaterialCardView
+import com.metro.delhimetrotracker.utils.applyTransition
 import android.os.Build
+import android.widget.Button
 import android.os.Bundle
 import android.util.Log
 import android.os.PowerManager
@@ -37,16 +42,19 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.RadioGroup
+import android.view.animation.Animation
 import com.metro.delhimetrotracker.data.repository.RoutePlanner
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import android.view.Window
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.firestore.FirebaseFirestore
 import android.net.Uri
 import com.metro.delhimetrotracker.data.repository.GtfsLoader
+import com.google.android.material.bottomsheet.BottomSheetDialog
 
 class MainActivity : AppCompatActivity() {
 
@@ -173,17 +181,21 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnStartJourney).setOnClickListener {
             checkForActiveTripBeforeStarting()
         }
+
+// 2. Dashboard Button (Safe call ?. preserved)
         findViewById<MaterialCardView>(R.id.btnViewDashboard)?.setOnClickListener {
             openDashboard()
         }
+
+// 3. App Info Button
         findViewById<MaterialCardView>(R.id.btnAppInfo).setOnClickListener {
             openAppGuide()
         }
+
+// 4. Account/Sign-In Button (Safe call ?. preserved)
         findViewById<MaterialCardView>(R.id.btnAccount)?.setOnClickListener {
             handleGoogleSignIn()
         }
-        val btnInfo = findViewById<MaterialCardView>(R.id.btnAppInfo)
-
         requestAllPermissions()
         checkBatteryOptimization() // Check and show battery optimization dialog
         if (auth.currentUser != null) {
@@ -226,41 +238,77 @@ class MainActivity : AppCompatActivity() {
             }
     }
     private fun handleGoogleSignIn() {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            // User is signed in, show sign out dialog
-            MaterialAlertDialogBuilder(this)
-                .setTitle("Sign Out")
-                .setMessage("Are you sure you want to sign out? Local data will be cleared.")
-                .setPositiveButton("Sign Out") { _, _ ->
-                    // 🛑 CRITICAL FIX: Wipe Local Data in Background
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        val db = (application as MetroTrackerApplication).database
-                        db.tripDao().deleteAllTrips()
+        // Just call the dialog function
+        showSignInDialog()
+    }
 
-                        // Clear any saved preferences (like last phone number)
-                        getSharedPreferences("MetroPrefs", Context.MODE_PRIVATE).edit().clear().apply()
+    private fun showSignInDialog() {
+        // 1. Use BottomSheetDialog (It handles the slide & back button automatically)
+        val dialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
 
-                        withContext(Dispatchers.Main) {
-                            // Now Sign Out of Cloud
-                            auth.signOut()
-                            googleSignInClient.signOut()
-                            Toast.makeText(this@MainActivity, "Signed out & Data Cleared", Toast.LENGTH_SHORT).show()
-                            updateSignInButton()
+        // 2. Load your existing layout
+        dialog.setContentView(R.layout.dialog_signin)
 
-                            // Optional: Restart Activity to ensure fresh UI state
-                            val intent = intent
-                            finish()
-                            startActivity(intent)
-                        }
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+        // 3. UI References (Use TextView for the Cancel button!)
+        val btnCancel = dialog.findViewById<TextView>(R.id.btnCancel)
+        val btnAction = dialog.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAction)
+        val tvTitle = dialog.findViewById<TextView>(R.id.tvTitle)
+        val tvSubtitle = dialog.findViewById<TextView>(R.id.tvSubtitle)
+
+        val user = auth.currentUser
+
+        // --- LOGIC (Same as before) ---
+        if (user != null) {
+            tvTitle?.text = "Signed in as ${user.displayName}"
+            tvSubtitle?.text = user.email
+            btnAction?.text = "Sign Out"
+            btnAction?.setBackgroundColor(getColor(R.color.accent_red))
+
+            btnAction?.setOnClickListener {
+                performSignOut()
+                dialog.dismiss()
+            }
         } else {
-            // User is not signed in, start sign in flow
-            val signInIntent = googleSignInClient.signInIntent
-            googleSignInLauncher.launch(signInIntent)
+            tvTitle?.text = "Sync Your Trips"
+            tvSubtitle?.text = "Sign in to save your travel history."
+            btnAction?.text = "Continue with Google"
+            btnAction?.setBackgroundColor(getColor(R.color.accent_blue))
+
+            btnAction?.setOnClickListener {
+                val signInIntent = googleSignInClient.signInIntent
+                googleSignInLauncher.launch(signInIntent)
+                dialog.dismiss()
+            }
+        }
+
+        // This now works perfectly with the Back Button animation logic
+        btnCancel?.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    // Keep your logout logic separate for cleanliness
+    private fun performSignOut() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            // 1. Wipe Data
+            val db = (application as MetroTrackerApplication).database
+            db.tripDao().deleteAllTrips()
+            getSharedPreferences("MetroPrefs", Context.MODE_PRIVATE).edit().clear().apply()
+
+            withContext(Dispatchers.Main) {
+                // 2. Sign Out Cloud
+                auth.signOut()
+                googleSignInClient.signOut()
+                Toast.makeText(this@MainActivity, "Signed out", Toast.LENGTH_SHORT).show()
+
+                // 3. Restart to clear UI
+                val intent = intent
+                finish()
+                startActivity(intent)
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+            }
         }
     }
     private fun updateSignInButton() {
@@ -328,6 +376,7 @@ class MainActivity : AppCompatActivity() {
                                 putExtra("EXTRA_TRIP_ID", activeTrip.id)
                             }
                             startActivity(trackingIntent)
+                            applyTransition(R.anim.slide_in_right, R.anim.slide_out_left)
                             dialog.dismiss()
                         }
                         .setNegativeButton("Cancel", null)
@@ -342,14 +391,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openAppGuide() {
-        val guideFragment = AppGuideFragment()
         supportFragmentManager.beginTransaction()
-            .replace(android.R.id.content, guideFragment)
+            // 1. Enter: Guide slides in from Left
+            // 2. Exit: Main screen slightly fades out (darkens)
+            // 3. Pop Enter: Main screen fades back in
+            // 4. Pop Exit: Guide slides back out to Left
+            .setCustomAnimations(
+                R.anim.slide_in_left,
+                android.R.anim.fade_out,
+                android.R.anim.fade_in,
+                R.anim.slide_out_left
+            )
+            .replace(android.R.id.content, AppGuideFragment())
             .addToBackStack(null)
             .commit()
     }
     private fun openDashboard() {
         supportFragmentManager.beginTransaction()
+            // 1. Enter Animation (Opening Dashboard)
+            // 2. Exit Animation (Main Screen leaving)
+            // 3. Pop Enter Animation (Main Screen coming back when you press Back)
+            // 4. Pop Exit Animation (Dashboard leaving when you press Back)
+            .setCustomAnimations(
+                R.anim.slide_in_right,
+                R.anim.slide_out_left,
+                R.anim.slide_in_left,
+                R.anim.slide_out_right
+            )
             .replace(android.R.id.content, com.metro.delhimetrotracker.ui.dashboard.DashboardFragment())
             .addToBackStack(null)
             .commit()
@@ -407,6 +475,8 @@ class MainActivity : AppCompatActivity() {
         // Create full-screen dialog
         val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         dialog.setContentView(R.layout.dialog_station_selector)
+
+        dialog.window?.attributes?.windowAnimations = R.style.DialogSlideAnimation
 
         // UI references
         val sourceAtv = dialog.findViewById<AutoCompleteTextView>(R.id.sourceAutoComplete)
@@ -811,9 +881,36 @@ class MainActivity : AppCompatActivity() {
 class AppGuideFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_app_guide, container, false)
-        view.findViewById<Button>(R.id.btnCloseGuide).setOnClickListener {
+
+        // Just pop the stack. The FragmentManager will handle the animation.
+        view.findViewById<Button>(R.id.btnCloseGuide).setBounceClickListener {
             parentFragmentManager.popBackStack()
         }
         return view
+    }
+}
+
+fun View.setBounceClickListener(onClicked: () -> Unit) {
+    this.setOnClickListener { view ->
+        // 1. Animate Scale Down
+        view.animate()
+            .scaleX(0.92f)
+            .scaleY(0.92f)
+            .setDuration(100)
+            .setInterpolator(AccelerateDecelerateInterpolator())
+            .withEndAction {
+                // 2. Animate Scale Back Up
+                view.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(100)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .withEndAction {
+                        // 3. Perform the actual action (Open page, etc.)
+                        onClicked()
+                    }
+                    .start()
+            }
+            .start()
     }
 }

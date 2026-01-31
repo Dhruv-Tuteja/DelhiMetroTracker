@@ -21,6 +21,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <queries>
         <package android:name="com.sraoss.dmrc" />
@@ -52,7 +53,11 @@
         <activity
             android:name=".ui.TrackingActivity"
             android:theme="@style/Theme.DelhiMetroTracker.NoActionBar" />
-
+        <activity
+            android:name=".ui.LoginActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.DelhiMetroTracker"/>
 
         <service
             android:name=".service.JourneyTrackingService"

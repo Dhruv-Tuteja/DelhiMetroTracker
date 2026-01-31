@@ -143,6 +143,18 @@
 
                 </LinearLayout>
             </LinearLayout>
+            <!-- NEXT TRAIN SCHEDULE - NEW ADDITION -->
+            <TextView
+                android:id="@+id/tvNextTrainSchedule"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:textColor="#FFC107"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:visibility="visible"
+                tools:text="Next Train: 10:15 AM"/>
 
             <!-- PROGRESS -->
             <LinearLayout
@@ -240,6 +252,8 @@
             app:strokeColor="#64B5F6"
             app:strokeWidth="2dp"
             app:cornerRadius="16dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
 
         <com.google.android.material.button.MaterialButton
@@ -251,7 +265,8 @@
             android:text="End Trip"
             android:textColor="@android:color/white"
             app:backgroundTint="#FF5252"
-            app:cornerRadius="16dp"/>
+            app:cornerRadius="16dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"/>
     </LinearLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

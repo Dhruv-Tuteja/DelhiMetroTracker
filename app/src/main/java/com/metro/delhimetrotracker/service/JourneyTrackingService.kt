@@ -442,7 +442,7 @@ class JourneyTrackingService : LifecycleService() {
     }
 
     private fun triggerVibration() {
-        val pattern = longArrayOf(0, 500, 200, 500)
+        val pattern = longArrayOf(0,1000,200,1000,200,1000,200,1000,200,1000,200)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
         } else {

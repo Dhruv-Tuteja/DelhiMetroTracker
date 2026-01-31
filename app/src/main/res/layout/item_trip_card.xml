@@ -10,6 +10,9 @@
     app:cardElevation="2dp"
     app:cardCornerRadius="12dp"
     app:cardBackgroundColor="@color/background_card"
+    android:clickable="true"
+    android:focusable="true"
+    android:background="?attr/selectableItemBackground"
     app:strokeWidth="0dp">
     <!-- Add this at the top of your trip card layout -->
 

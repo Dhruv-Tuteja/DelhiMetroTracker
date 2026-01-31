@@ -261,11 +261,82 @@ interface StopTimeDao {
      * Ordered by soonest first.
      */
     @Query("""
-        SELECT * FROM stop_times 
-        WHERE stop_id = :gtfsStopId 
-        AND arrival_time > :currentTime 
-        ORDER BY arrival_time ASC 
-        LIMIT :limit
-    """)
-    suspend fun getNextTrains(gtfsStopId: String, currentTime: String, limit: Int): List<StopTime>
+    SELECT * FROM stop_times 
+    WHERE stop_id = :gtfsStopId 
+    AND arrival_minutes > :currentMinutes 
+    ORDER BY arrival_minutes ASC 
+    LIMIT :limit
+""")
+    suspend fun getNextTrains(gtfsStopId: String, currentMinutes: Int, limit: Int): List<StopTime>
+
+
+    // In Daos.kt -> StopTimeDao
+
+    // Finds the most recent train that has already passed
+    @Query("SELECT * FROM stop_times WHERE stop_id = :gtfsStopId AND arrival_minutes < :currentMinutes ORDER BY arrival_minutes DESC LIMIT 1")
+    suspend fun getPreviousTrain(gtfsStopId: String, currentMinutes: Int): StopTime?
+
+    @Query("SELECT * FROM stop_times WHERE stop_id = :gtfsStopId AND arrival_minutes > :currentMinutes ORDER BY arrival_minutes ASC LIMIT 1")
+    suspend fun getNextTrain(gtfsStopId: String, currentMinutes: Int): StopTime?
+
+
+    @Query("""
+    SELECT * FROM stop_times 
+    WHERE trip_id = :tripId 
+    AND stop_id = :gtfsStopId 
+    LIMIT 1
+""")
+    suspend fun getArrivalForTrip(
+        tripId: String,
+        gtfsStopId: String
+    ): StopTime?
+
+    // In Daos.kt -> StopTimeDao
+
+    // Finds a train that connects Current Station -> Next Station (Correct Direction)
+    @Query("""
+SELECT start_node.* FROM stop_times AS start_node
+INNER JOIN stop_times AS end_node 
+ON start_node.trip_id = end_node.trip_id
+WHERE start_node.stop_id = :currentGtfsId 
+AND end_node.stop_id = :nextGtfsId
+AND start_node.arrival_minutes > :currentMinutes
+AND end_node.stop_sequence > start_node.stop_sequence
+ORDER BY start_node.arrival_minutes ASC
+LIMIT 1
+""")
+    suspend fun getNextTrainInDirection(
+        currentGtfsId: String,
+        nextGtfsId: String,
+        currentMinutes: Int
+    ): StopTime?
+
+
+    // Finds the LAST departed train in the correct direction
+    @Query("""
+SELECT start_node.* FROM stop_times AS start_node
+INNER JOIN stop_times AS end_node 
+ON start_node.trip_id = end_node.trip_id
+WHERE start_node.stop_id = :currentGtfsId 
+AND end_node.stop_id = :nextGtfsId
+AND start_node.arrival_minutes < :currentMinutes
+AND end_node.stop_sequence > start_node.stop_sequence
+ORDER BY start_node.arrival_minutes DESC
+LIMIT 1
+""")
+    suspend fun getPreviousTrainInDirection(
+        currentGtfsId: String,
+        nextGtfsId: String,
+        currentMinutes: Int
+    ): StopTime?
+
+    @Query("DELETE FROM stop_times")
+    suspend fun deleteAll()
+
+
+    @Query("SELECT DISTINCT stop_id FROM stop_times LIMIT 50")
+    suspend fun getAllStopIds(): List<String>
+
+    @Query("SELECT * FROM stop_times WHERE stop_id = :stopId LIMIT 5")
+    suspend fun getAnySampleTrains(stopId: String): List<StopTime>
 }
