@@ -289,22 +289,63 @@ class MainActivity : AppCompatActivity() {
                                 startTime = Date(document.getLong("startTime") ?: 0L),
                                 endTime = document.getLong("endTime")?.let { Date(it) },
                                 durationMinutes = document.getLong("durationMinutes")?.toInt(),
-                                visitedStations = (document.get("visitedStations") as? List<String>) ?: emptyList(),
+                                // ✅ FIX: Safely cast Firestore array
+                                visitedStations = (document.get("visitedStations") as? ArrayList<*>)
+                                    ?.filterIsInstance<String>() ?: emptyList(),
+                                fare = document.getDouble("fare"),
                                 status = TripStatus.valueOf(
                                     document.getString("status") ?: "COMPLETED"
                                 ),
                                 emergencyContact = document.getString("emergencyContact") ?: "",
+                                smsCount = document.getLong("smsCount")?.toInt() ?: 0,
+                                createdAt = document.getLong("createdAt")?.let { Date(it) } ?: Date(),
+                                notes = document.getString("notes"),
+                                hadSosAlert = document.getBoolean("hadSosAlert") ?: false,
+                                sosStationName = document.getString("sosStationName"),
+                                sosTimestamp = document.getLong("sosTimestamp"),
+                                cancellationReason = document.getString("cancellationReason"),
                                 syncState = "SYNCED",
                                 deviceId = document.getString("deviceId") ?: "cloud",
                                 lastModified = cloudLastModified,
                                 isDeleted = cloudIsDeleted, // ← Keep the deletion state from cloud
-                                hadSosAlert = document.getBoolean("hadSosAlert") ?: false,
-                                sosStationName = document.getString("sosStationName"),
-                                sosTimestamp = document.getLong("sosTimestamp"),
-                                cancellationReason = document.getString("cancellationReason")
+                                schemaVersion = document.getLong("schemaVersion")?.toInt() ?: 1
                             )
 
                             appDb.tripDao().insertTrip(trip)
+
+                            // ✅ NEW: Delete old checkpoints and restore new ones
+                            appDb.stationCheckpointDao().deleteCheckpointsByTrip(id)
+
+                            val checkpointsData = document.get("checkpoints") as? ArrayList<*>
+                            checkpointsData?.forEach { checkpointObj ->
+                                try {
+                                    val checkpointMap = checkpointObj as? Map<*, *>
+                                    if (checkpointMap != null) {
+                                        val checkpoint = com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint(
+                                            tripId = id,
+                                            stationId = checkpointMap["stationId"] as? String ?: "",
+                                            stationName = checkpointMap["stationName"] as? String ?: "",
+                                            stationOrder = (checkpointMap["stationOrder"] as? Long)?.toInt() ?: 0,
+                                            arrivalTime = Date((checkpointMap["arrivalTime"] as? Long) ?: 0L),
+                                            departureTime = (checkpointMap["departureTime"] as? Long)?.let { Date(it) },
+                                            detectionMethod = com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod.valueOf(
+                                                checkpointMap["detectionMethod"] as? String ?: "MANUAL"
+                                            ),
+                                            confidence = (checkpointMap["confidence"] as? Double)?.toFloat() ?: 1.0f,
+                                            smsSent = checkpointMap["smsSent"] as? Boolean ?: false,
+                                            smsTimestamp = (checkpointMap["smsTimestamp"] as? Long)?.let { Date(it) },
+                                            latitude = checkpointMap["latitude"] as? Double,
+                                            longitude = checkpointMap["longitude"] as? Double,
+                                            accuracy = (checkpointMap["accuracy"] as? Double)?.toFloat(),
+                                            timestamp = checkpointMap["timestamp"] as? Long
+                                        )
+                                        appDb.stationCheckpointDao().insertCheckpoint(checkpoint)
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("Sync", "Failed to parse checkpoint: ${e.message}")
+                                }
+                            }
+
                             changesCount++
 
                         } catch (e: Exception) {
@@ -561,18 +602,60 @@ class MainActivity : AppCompatActivity() {
                                 startTime = Date(document.getLong("startTime") ?: 0L),
                                 endTime = document.getLong("endTime")?.let { Date(it) },
                                 durationMinutes = document.getLong("durationMinutes")?.toInt(),
-                                visitedStations = (document.get("visitedStations") as? List<String>) ?: emptyList(),
+                                // ✅ FIX: Safely cast Firestore array
+                                visitedStations = (document.get("visitedStations") as? ArrayList<*>)
+                                    ?.filterIsInstance<String>() ?: emptyList(),
+                                fare = document.getDouble("fare"),
                                 status = TripStatus.valueOf(document.getString("status") ?: "COMPLETED"),
                                 emergencyContact = document.getString("emergencyContact") ?: "",
-
+                                smsCount = document.getLong("smsCount")?.toInt() ?: 0,
+                                createdAt = document.getLong("createdAt")?.let { Date(it) } ?: Date(),
+                                notes = document.getString("notes"),
+                                hadSosAlert = document.getBoolean("hadSosAlert") ?: false,
+                                sosStationName = document.getString("sosStationName"),
+                                sosTimestamp = document.getLong("sosTimestamp"),
+                                cancellationReason = document.getString("cancellationReason"),
                                 // Important: Mark as SYNCED so we don't upload it again
                                 syncState = "SYNCED",
                                 deviceId = document.getString("deviceId") ?: "restored_device",
                                 lastModified = document.getLong("lastModified") ?: System.currentTimeMillis(),
-                                isDeleted = false
+                                isDeleted = false,
+                                schemaVersion = document.getLong("schemaVersion")?.toInt() ?: 1
                             )
 
                             appDb.tripDao().insertTrip(trip)
+
+                            // ✅ NEW: Restore checkpoints
+                            val checkpointsData = document.get("checkpoints") as? ArrayList<*>
+                            checkpointsData?.forEach { checkpointObj ->
+                                try {
+                                    val checkpointMap = checkpointObj as? Map<*, *>
+                                    if (checkpointMap != null) {
+                                        val checkpoint = com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint(
+                                            tripId = id,
+                                            stationId = checkpointMap["stationId"] as? String ?: "",
+                                            stationName = checkpointMap["stationName"] as? String ?: "",
+                                            stationOrder = (checkpointMap["stationOrder"] as? Long)?.toInt() ?: 0,
+                                            arrivalTime = Date((checkpointMap["arrivalTime"] as? Long) ?: 0L),
+                                            departureTime = (checkpointMap["departureTime"] as? Long)?.let { Date(it) },
+                                            detectionMethod = com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod.valueOf(
+                                                checkpointMap["detectionMethod"] as? String ?: "MANUAL"
+                                            ),
+                                            confidence = (checkpointMap["confidence"] as? Double)?.toFloat() ?: 1.0f,
+                                            smsSent = checkpointMap["smsSent"] as? Boolean ?: false,
+                                            smsTimestamp = (checkpointMap["smsTimestamp"] as? Long)?.let { Date(it) },
+                                            latitude = checkpointMap["latitude"] as? Double,
+                                            longitude = checkpointMap["longitude"] as? Double,
+                                            accuracy = (checkpointMap["accuracy"] as? Double)?.toFloat(),
+                                            timestamp = checkpointMap["timestamp"] as? Long
+                                        )
+                                        appDb.stationCheckpointDao().insertCheckpoint(checkpoint)
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("Restore", "Failed to parse checkpoint: ${e.message}")
+                                }
+                            }
+
                             restoreCount++
                         } catch (e: Exception) {
                             Log.e("Restore", "Failed to parse trip: ${e.message}")

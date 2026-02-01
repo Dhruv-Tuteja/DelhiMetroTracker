@@ -12,32 +12,32 @@ import java.util.Date
 data class Trip(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    
+
     val sourceStationId: String,
     val sourceStationName: String,
     val destinationStationId: String,
     val destinationStationName: String,
-    
+
     val metroLine: String, // e.g., "Red Line", "Blue Line"
-    
+
     val startTime: Date,
     val endTime: Date? = null,
-    
+
     val durationMinutes: Int? = null,
-    
+
     // Stations visited during the journey
     val visitedStations: List<String>, // List of station IDs
-    
+
     // Optional fare information
     val fare: Double? = null,
-    
+
     // Journey status
     val status: TripStatus = TripStatus.IN_PROGRESS,
-    
+
     // SMS tracking
     val emergencyContact: String, // Phone number
     val smsCount: Int = 0,
-    
+
     // Additional metadata
     val createdAt: Date = Date(),
     val notes: String? = null,
@@ -76,24 +76,24 @@ enum class TripStatus {
 data class StationCheckpoint(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    
+
     val tripId: Long, // Foreign key to Trip
-    
+
     val stationId: String,
     val stationName: String,
     val stationOrder: Int, // Order in the journey (0 = source, n = destination)
-    
+
     val arrivalTime: Date,
     val departureTime: Date? = null,
-    
+
     // Detection metadata
     val detectionMethod: DetectionMethod,
     val confidence: Float, // 0.0 to 1.0
-    
+
     // SMS status
     val smsSent: Boolean = false,
     val smsTimestamp: Date? = null,
-    
+
     // Location data (if available)
     val latitude: Double? = null,
     val longitude: Double? = null,
@@ -140,30 +140,30 @@ data class MetroStation(
 data class UserSettings(
     @PrimaryKey
     val id: Int = 1, // Single row table
-    
+
     // SMS settings
     val smsEnabled: Boolean = true,
     val emergencyContact: String? = null,
     val emergencyContactName: String? = null,
-    
+
     // Notification settings
     val vibrationEnabled: Boolean = true,
     val soundEnabled: Boolean = true,
     val notificationEnabled: Boolean = true,
-    
+
     // Detection settings
     val useGps: Boolean = true,
     val useAccelerometer: Boolean = true,
     val useNetworkDetection: Boolean = true,
     val detectionSensitivity: Float = 0.7f, // 0.0 to 1.0
-    
+
     // Journey settings
     val autoStartJourney: Boolean = false,
     val saveJourneyHistory: Boolean = true,
-    
+
     // Privacy settings
     val shareLocationData: Boolean = false,
-    
+
     // UI preferences
     val darkMode: Boolean = false,
     val language: String = "en"
@@ -217,4 +217,24 @@ data class ScheduledTrip(
     val deviceId: String = "unknown",
     val lastModified: Long = System.currentTimeMillis(),
     val isDeleted: Boolean = false
+)
+
+/**
+ * Data class for syncing checkpoints to/from Firestore
+ * This is NOT a Room entity - just a data transfer object
+ */
+data class CheckpointData(
+    val stationId: String,
+    val stationName: String,
+    val stationOrder: Int,
+    val arrivalTime: Long,
+    val departureTime: Long? = null,
+    val detectionMethod: String,
+    val confidence: Float,
+    val smsSent: Boolean = false,
+    val smsTimestamp: Long? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val accuracy: Float? = null,
+    val timestamp: Long? = null
 )

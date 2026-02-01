@@ -1,6 +1,7 @@
 package com.metro.delhimetrotracker.data.model
 
 import java.util.Date
+import com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint
 
 /**
  * Data transfer object for dashboard statistics
@@ -28,7 +29,7 @@ data class TripCardData(
     val lineColors: List<String>,
     val expectedDurationMinutes: Int,
     val delayMinutes: Int,
-
+    val checkpoints: List<StationCheckpoint> = emptyList(), // Add this
     val hadSosAlert: Boolean? = false,
     val sosStationName: String? = null,
     val sosTimestamp: Long? = null

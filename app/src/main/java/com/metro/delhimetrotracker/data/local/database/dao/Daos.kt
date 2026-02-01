@@ -176,6 +176,9 @@ interface StationCheckpointDao {
     @Query("SELECT * FROM station_checkpoints WHERE tripId = :tripId ORDER BY stationOrder ASC")
     fun getCheckpointsByTrip(tripId: Long): Flow<List<StationCheckpoint>>
 
+    @Query("SELECT * FROM station_checkpoints WHERE tripId = :tripId ORDER BY stationOrder ASC")
+    suspend fun getCheckpointsForTrip(tripId: Long): List<StationCheckpoint>
+
     @Query("SELECT * FROM station_checkpoints WHERE tripId = :tripId ORDER BY stationOrder DESC LIMIT 1")
     suspend fun getLastCheckpoint(tripId: Long): StationCheckpoint?
 

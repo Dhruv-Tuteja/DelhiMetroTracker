@@ -13,12 +13,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.Calendar
+import com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint
 
 class DashboardRepository(private val database: AppDatabase) {
 
     private val tripDao = database.tripDao()
     private val stationDao = database.metroStationDao()
     private val scheduledTripDao = database.scheduledTripDao()
+
+    private val stationCheckpointDao =  database.stationCheckpointDao() // 1. Inject this DAO
 
     suspend fun deleteTrip(tripId: Long) {
         tripDao.markTripAsDeleted(tripId)
@@ -129,16 +132,25 @@ class DashboardRepository(private val database: AppDatabase) {
             tripDao.getRecentTrips(50),
             stationDao.getAllStationsFlow()
         ) { trips, allStations ->
+            // 2. Fetch checkpoints for each trip inside the map
             trips.mapNotNull { trip ->
-                enrichTripData(trip, allStations)
+                // This fetches the actual checkpoints from Room
+                val checkpoints = stationCheckpointDao.getCheckpointsForTrip(trip.id)
+
+                enrichTripData(trip, allStations, checkpoints)
             }
         }
     }
 
     /**
-     * Enrich a single trip with station metadata
+     * Enrich a single trip with station metadata and checkpoints
      */
-    private fun enrichTripData(trip: Trip, allStations: List<MetroStation>): TripCardData? {
+    private fun enrichTripData(
+        trip: Trip,
+        allStations: List<MetroStation>,
+        checkpoints: List<StationCheckpoint> // 3. Add parameter
+    ): TripCardData? {
+
         if (trip.endTime == null || trip.durationMinutes == null) return null
 
         val stationMap = allStations.associateBy { it.stationId }
@@ -168,7 +180,10 @@ class DashboardRepository(private val database: AppDatabase) {
             delayMinutes = delayMinutes,
             hadSosAlert = trip.hadSosAlert,
             sosStationName = trip.sosStationName,
-            sosTimestamp = trip.sosTimestamp
+            sosTimestamp = trip.sosTimestamp,
+
+            // 4. Pass the checkpoints to the UI model
+            checkpoints = checkpoints
         )
     }
 }

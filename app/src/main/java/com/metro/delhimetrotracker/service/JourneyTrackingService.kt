@@ -23,6 +23,7 @@ import com.metro.delhimetrotracker.utils.sms.SmsHelper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
 import java.util.*
+import com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod.MANUAL
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
 import com.metro.delhimetrotracker.ui.TrackingActivity
@@ -214,28 +215,50 @@ class JourneyTrackingService : LifecycleService() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val jsonString = JSONArray(updatedVisitedList).toString()
-            database.tripDao().updateVisitedStations(trip.id, jsonString)
-            database.tripDao().updateSyncStatus(trip.id, "PENDING", System.currentTimeMillis())
-            // 🔥 FIX: Update currentTrip in memory!
-            currentTrip = currentTrip!!.copy(visitedStations = updatedVisitedList)
+                database.tripDao().updateVisitedStations(trip.id, jsonString)
+                database.tripDao().updateSyncStatus(trip.id, "PENDING", System.currentTimeMillis())
 
-            val targetStation = stationRoute[targetIndex]
-            val smsMessage = "Manual Update: Reached ${targetStation.stationName} ($timeOffset). Tracking resumed."
+                // 🔥 FIX: Update currentTrip in memory!
+                currentTrip = currentTrip!!.copy(visitedStations = updatedVisitedList)
 
-            if (trip.emergencyContact.isNotEmpty()) {
-                smsHelper.sendSms(trip.emergencyContact, smsMessage)
-            }
+                if (targetIndex >= currentStationIndex) {
+                    val jumpedStations = stationRoute.subList(currentStationIndex, targetIndex + 1)
 
-            currentStationIndex = targetIndex + 1
-            lastDetectedStationId = targetStationId
+                    jumpedStations.forEachIndexed { index, station ->
+                        val checkpoint = StationCheckpoint(
+                            tripId = trip.id,
+                            stationId = station.stationId,
+                            stationName = station.stationName,
+                            // Calculate the correct sequence number (0-based or 1-based depending on your preference)
+                            stationOrder = currentStationIndex + index,
+                            arrivalTime = Date(), // Use current time for manual jumps
+                            detectionMethod = MANUAL,
+                            confidence = 1.0f,
+                            latitude = null,
+                            longitude = null
+                        )
+                        database.stationCheckpointDao().insertCheckpoint(checkpoint)
+                        Log.d(TAG, "Created manual checkpoint for: ${station.stationName}")
+                    }
+                }
 
-            withContext(Dispatchers.Main) {
-                updateNotification("Jumped to: ${targetStation.stationName}")
-            }
+                val targetStation = stationRoute[targetIndex]
+                val smsMessage = "Manual Update: Reached ${targetStation.stationName} ($timeOffset). Tracking resumed."
 
-            if (currentStationIndex >= stationRoute.size) {
-                stopJourneyTracking()
-            }
+                if (trip.emergencyContact.isNotEmpty()) {
+                    smsHelper.sendSms(trip.emergencyContact, smsMessage)
+                }
+
+                currentStationIndex = targetIndex + 1
+                lastDetectedStationId = targetStationId
+
+                withContext(Dispatchers.Main) {
+                    updateNotification("Jumped to: ${targetStation.stationName}")
+                }
+
+                if(currentStationIndex >= stationRoute.size) {
+                    stopJourneyTracking()
+                }
                 Log.d(TAG, "Manual Jump Successful: Updated DB with ${updatedVisitedList.size} stations")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to update manual jump in DB", e)
@@ -290,6 +313,22 @@ class JourneyTrackingService : LifecycleService() {
                 val updatedJson = org.json.JSONArray(updatedVisited).toString()
                 database.tripDao().updateVisitedStations(currentTrip!!.id, updatedJson)
                 currentTrip = currentTrip!!.copy(visitedStations = updatedVisited)
+
+                val checkpoint = StationCheckpoint(
+                    tripId = currentTrip!!.id,
+                    stationId = nextStation.stationId,
+                    stationName = nextStation.stationName,
+                    stationOrder = currentStationIndex, // 1-based index or 0-based as you prefer
+                    arrivalTime = Date(), // <--- THIS CAPTURES THE TIMESTAMP
+                    detectionMethod = method,
+                    confidence = confidence,
+                    latitude = location?.latitude,
+                    longitude = location?.longitude
+                )
+
+                database.stationCheckpointDao().insertCheckpoint(checkpoint)
+
+                Log.d(TAG, "✅ Checkpoint saved: ${nextStation.stationName} at ${Date()}")
 
                 withContext(Dispatchers.Main) {
                     updateNotification("Current: ${nextStation.stationName}")

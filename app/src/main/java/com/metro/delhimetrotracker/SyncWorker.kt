@@ -41,21 +41,41 @@ class SyncWorker(
             for (batch in batches) {
                 batch.forEach { trip ->
                     try {
-                        val tripMap = tripToFirestoreMap(trip)
+                        // ✅ FIXED: Use the suspend function from Daos.kt
+                        val checkpoints = db.tripDao().getCheckpointsForTrip(trip.id)
 
-                        // ========================================================
-                        // 🔥 CRITICAL FIX: Format ID to 4 digits (0001, 0002)
-                        // ========================================================
+                        // ✅ Convert checkpoints to map list for Firestore
+                        val checkpointDataList = checkpoints.map { checkpoint ->
+                            mapOf(
+                                "stationId" to checkpoint.stationId,
+                                "stationName" to checkpoint.stationName,
+                                "stationOrder" to checkpoint.stationOrder,
+                                "arrivalTime" to checkpoint.arrivalTime.time,
+                                "departureTime" to checkpoint.departureTime?.time,
+                                "detectionMethod" to checkpoint.detectionMethod.name,
+                                "confidence" to checkpoint.confidence,
+                                "smsSent" to checkpoint.smsSent,
+                                "smsTimestamp" to checkpoint.smsTimestamp?.time,
+                                "latitude" to checkpoint.latitude,
+                                "longitude" to checkpoint.longitude,
+                                "accuracy" to checkpoint.accuracy,
+                                "timestamp" to checkpoint.timestamp
+                            )
+                        }
+
+                        val tripMap = tripToFirestoreMap(trip, checkpointDataList)
+
+                        // Format ID to 4 digits (0001, 0002)
                         val formattedDocId = String.format(java.util.Locale.US, "%04d", trip.id)
 
                         firestore.collection("users")
                             .document(userId)
                             .collection("trips")
-                            .document(formattedDocId) // <--- CHANGED HERE
+                            .document(formattedDocId)
                             .set(tripMap)
                             .await()
 
-                        // 7. Update local Room status to SYNCED
+                        // Update local Room status to SYNCED
                         db.tripDao().updateSyncStatus(
                             tripId = trip.id,
                             newState = "SYNCED",
@@ -70,14 +90,85 @@ class SyncWorker(
                     }
                 }
             }
-
+            pullFromFirestore(db, userId, firestore)
             Result.success()
         } catch (e: Exception) {
             Result.retry()
         }
     }
 
-    private fun tripToFirestoreMap(trip: Trip): Map<String, Any?> {
+    private suspend fun pullFromFirestore(
+        db: com.metro.delhimetrotracker.data.local.database.AppDatabase,
+        userId: String,
+        firestore: FirebaseFirestore
+    ) {
+        // 1. Get the last sync time (You should save this in SharedPrefs ideally)
+        // For now, we fetch everything, or you can implement a SharedPrefs check here.
+        val lastSyncTime: Long = 0
+
+        val snapshot = firestore.collection("users")
+            .document(userId)
+            .collection("trips")
+            .whereGreaterThan("lastModified", lastSyncTime)
+            .get()
+            .await()
+
+        for (document in snapshot.documents) {
+            // 1. Parse Basic Trip Data
+            // Note: Ideally use .toObject(Trip::class.java) if field names match exactly.
+            // Here we assume the Trip exists or is inserted via a similar mapping.
+
+            val tripId = document.getLong("id") ?: continue
+
+            // (Optional: Insert the Trip entity here if it doesn't exist locally)
+            // val trip = document.toObject(Trip::class.java)
+            // db.tripDao().insertTrip(trip)
+
+            // 2. 🔥 PARSE CHECKPOINTS
+            val checkpointsList = document.get("checkpoints") as? List<Map<String, Any>>
+
+            checkpointsList?.forEach { map ->
+                try {
+                    // Handle Enum conversion safely
+                    val methodString = map["detectionMethod"] as? String ?: "GPS"
+                    val methodEnum = try {
+                        com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod.valueOf(methodString)
+                    } catch (e: Exception) {
+                        com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod.GPS
+                    }
+
+                    val checkpoint = com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint(
+                        tripId = tripId,
+                        stationId = map["stationId"] as String,
+                        stationName = map["stationName"] as String,
+                        stationOrder = (map["stationOrder"] as Long).toInt(),
+                        arrivalTime = java.util.Date(map["arrivalTime"] as Long),
+                        departureTime = (map["departureTime"] as? Long)?.let { java.util.Date(it) },
+
+                        // ✅ Fixed: Enum Conversion
+                        detectionMethod = methodEnum,
+
+                        confidence = (map["confidence"] as? Double)?.toFloat() ?: 1.0f,
+                        smsSent = (map["smsSent"] as? Boolean) ?: false,
+                        smsTimestamp = (map["smsTimestamp"] as? Long)?.let { java.util.Date(it) },
+                        latitude = map["latitude"] as? Double,
+                        longitude = map["longitude"] as? Double,
+                        accuracy = (map["accuracy"] as? Double)?.toFloat(),
+                        timestamp = (map["timestamp"] as? Long) ?: System.currentTimeMillis()
+                    )
+
+                    // Insert into Local Room DB
+                    db.stationCheckpointDao().insertCheckpoint(checkpoint)
+
+                } catch (e: Exception) {
+                    android.util.Log.e("SyncWorker", "Error parsing checkpoint for trip $tripId", e)
+                }
+            }
+        }
+    }
+
+    // ✅ UPDATED: Now accepts checkpoints parameter
+    private fun tripToFirestoreMap(trip: Trip, checkpoints: List<Map<String, Any?>>): Map<String, Any?> {
         return hashMapOf(
             "id" to trip.id,
             "sourceStationId" to trip.sourceStationId,
@@ -103,7 +194,9 @@ class SyncWorker(
             "deviceId" to trip.deviceId,
             "lastModified" to trip.lastModified,
             "isDeleted" to trip.isDeleted,
-            "schemaVersion" to trip.schemaVersion
+            "schemaVersion" to trip.schemaVersion,
+            // ✅ NEW: Add checkpoints array
+            "checkpoints" to checkpoints
         )
     }
 }
