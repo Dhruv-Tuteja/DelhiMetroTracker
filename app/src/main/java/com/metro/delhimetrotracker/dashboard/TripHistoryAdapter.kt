@@ -68,7 +68,7 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
 
             tvSource.text = "${trip.sourceStationName} → ${trip.destinationStationName}"
             tvDuration.text = formatDuration(trip.durationMinutes)
-            tvStationCount.text = "${trip.checkpoints.size} stations"
+            tvStationCount.text = "${trip.stationCount} stations"
             tvDateTime.text = dateFormat.format(trip.startTime)
 
             // Show SOS badge if triggered
