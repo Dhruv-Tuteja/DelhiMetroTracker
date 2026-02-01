@@ -6,7 +6,6 @@
 ![API](https://img.shields.io/badge/API-24%2B-brightgreen.svg)
 ![Language](https://img.shields.io/badge/Language-Kotlin-blue.svg)
 ![Architecture](https://img.shields.io/badge/Architecture-MVVM-orange.svg)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 *Your intelligent companion for safe and smart Delhi Metro travel*
 
