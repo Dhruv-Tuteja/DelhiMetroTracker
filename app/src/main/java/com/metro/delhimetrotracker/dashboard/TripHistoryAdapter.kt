@@ -28,7 +28,7 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
     }
     interface OnTripDoubleTapListener {
         fun onTripDoubleTap(source: String, destination: String)
-        fun onTripShare(trip: TripCardData)
+        fun onTripLongPress(trip: TripCardData)
     }
     override fun onBindViewHolder(holder: TripViewHolder, position: Int) {
         holder.bind(getItem(position))
@@ -103,12 +103,15 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
                     doubleTapListener.onTripDoubleTap(trip.sourceStationName, trip.destinationStationName)
                     return true
                 }
+                override fun onLongPress(e: MotionEvent) {
+                    doubleTapListener.onTripLongPress(trip)
+                }
             })
-            itemView.setOnLongClickListener {
-                doubleTapListener.onTripShare(trip)
-                true // This tells Android we "consumed" the click
-            }
-            itemView.setOnTouchListener { v, event ->
+//            itemView.setOnLongClickListener {
+//                doubleTapListener.onTripShare(trip)
+//                true // This tells Android we "consumed" the click
+//            }
+            itemView.setOnTouchListener { _, event ->
                 gestureDetector.onTouchEvent(event)
                 false
             }

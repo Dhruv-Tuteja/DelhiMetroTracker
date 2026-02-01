@@ -188,5 +188,33 @@ data class StopTime(
     val stop_id: String,        // Links to MetroStation.gtfs_stop_id
     val stop_sequence: Int,
     val pickup_type: Int = 0,
+)
 
+@Entity(tableName = "scheduled_trips")
+data class ScheduledTrip(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+
+    val sourceStationId: String,
+    val sourceStationName: String,
+    val destinationStationId: String,
+    val destinationStationName: String,
+
+    val scheduledTimeHour: Int,      // 9 (for 9:00 AM)
+    val scheduledTimeMinute: Int,    // 0
+
+    val reminderMinutesBefore: Int = 30,
+
+    val isRecurring: Boolean = false,
+    val recurringDays: String? = null,
+
+    val isActive: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis(),
+
+    val scheduledDate: Long? = null,
+
+    val syncState: String = "PENDING",
+    val deviceId: String = "unknown",
+    val lastModified: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false
 )

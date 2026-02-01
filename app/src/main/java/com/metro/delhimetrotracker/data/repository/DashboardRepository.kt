@@ -7,26 +7,35 @@ import com.metro.delhimetrotracker.data.local.database.entities.TripStatus
 import com.metro.delhimetrotracker.data.model.DashboardStats
 import com.metro.delhimetrotracker.data.model.FrequentRoute
 import com.metro.delhimetrotracker.data.model.TripCardData
+import com.metro.delhimetrotracker.data.local.database.entities.ScheduledTrip
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.Calendar
 
-/**
- * Repository for dashboard analytics
- */
 class DashboardRepository(private val database: AppDatabase) {
 
     private val tripDao = database.tripDao()
     private val stationDao = database.metroStationDao()
+    private val scheduledTripDao = database.scheduledTripDao()
 
     suspend fun deleteTrip(tripId: Long) {
-        // We use the "Soft Delete" method we added to the DAO
-        database.tripDao().markTripAsDeleted(tripId)
+        tripDao.markTripAsDeleted(tripId)
     }
     suspend fun restoreTrip(tripId: Long) {
-        database.tripDao().restoreTrip(tripId)
+        tripDao.restoreTrip(tripId)
+    }
+    fun getAllScheduledTrips(): Flow<List<ScheduledTrip>> {
+        return database.scheduledTripDao().getAllActiveScheduledTrips()
+    }
+    suspend fun getAllStationNames(): List<String> {
+        return stationDao.getAllStations().map { it.stationName }.sorted()
+    }
+
+    // --- ADDED: Scheduled Trips for the 2nd Tab ---
+    fun getScheduledTrips(): Flow<List<ScheduledTrip>> {
+        return scheduledTripDao.getAllActiveScheduledTrips()
     }
     fun getDashboardStats(): Flow<DashboardStats> {
         return combine(
@@ -50,7 +59,7 @@ class DashboardRepository(private val database: AppDatabase) {
                 totalMinutes = totalMinutes ?: 0,
                 uniqueStationsVisited = uniqueStations,
                 carbonSavedKg = carbonSaved,
-                totalStationsInNetwork = 250
+                totalStationsInNetwork = 289
             )
         }
     }
@@ -118,7 +127,7 @@ class DashboardRepository(private val database: AppDatabase) {
     suspend fun getEnrichedTripHistory(): Flow<List<TripCardData>> {
         return combine(
             tripDao.getRecentTrips(50),
-            stationDao.getAllStations()
+            stationDao.getAllStationsFlow()
         ) { trips, allStations ->
             trips.mapNotNull { trip ->
                 enrichTripData(trip, allStations)

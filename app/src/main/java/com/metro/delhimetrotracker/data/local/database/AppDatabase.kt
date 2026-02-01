@@ -46,9 +46,9 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 
 // Update your database builder to include the migration:
 @Database(
-    entities = [Trip::class, StationCheckpoint::class, MetroStation::class, UserSettings::class,StopTime::class],
-    version = 2, // Increment version
-    exportSchema = true
+    entities = [Trip::class, StationCheckpoint::class, MetroStation::class, UserSettings::class,StopTime::class, ScheduledTrip::class ],
+    version = 3, // Increment version
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
@@ -56,6 +56,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun metroStationDao(): MetroStationDao
     abstract fun userSettingsDao(): UserSettingsDao
     abstract fun stopTimeDao(): StopTimeDao
+    abstract fun scheduledTripDao(): ScheduledTripDao
 
     companion object {
         @Volatile

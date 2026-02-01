@@ -65,7 +65,7 @@ android {
 dependencies {
     // 3. Add the Compiler Tool (Used by the task below)
     wireCompiler("com.squareup.wire:wire-compiler:5.0.0")
-
+    implementation("it.xabaras.android:recyclerview-swipedecorator:1.4")
     // 4. The Runtime (Required for the generated code to work)
     implementation("com.squareup.wire:wire-runtime:5.0.0")
 

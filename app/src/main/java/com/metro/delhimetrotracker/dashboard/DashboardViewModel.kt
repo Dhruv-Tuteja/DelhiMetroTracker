@@ -7,9 +7,10 @@ import com.metro.delhimetrotracker.data.repository.DashboardRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-// Adjust the package path if your entity is in a different folder
+import androidx.lifecycle.ViewModelProvider
+import com.metro.delhimetrotracker.data.local.database.entities.ScheduledTrip
 import com.metro.delhimetrotracker.data.local.database.entities.Trip
+import kotlinx.coroutines.launch
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
@@ -23,13 +24,13 @@ class DashboardViewModel(
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
+    private val _scheduledTrips = MutableStateFlow<List<ScheduledTrip>>(emptyList())
+    val scheduledTrips: Flow<List<ScheduledTrip>> = repository.getAllScheduledTrips()
     init {
         loadDashboardData()
+        loadScheduledTrips()
     }
 
-    /**
-     * Load all dashboard data reactively
-     */
     private fun loadDashboardData() {
         viewModelScope.launch {
             try {
@@ -81,9 +82,6 @@ class DashboardViewModel(
         }
     }
 
-    /**
-     * Get day name from Calendar.DAY_OF_WEEK
-     */
     fun getDayName(dayOfWeek: Int): String {
         return when (dayOfWeek) {
             1 -> "Sunday"
@@ -97,9 +95,6 @@ class DashboardViewModel(
         }
     }
 
-    /**
-     * Format time period
-     */
     fun formatTimePeriod(dayOfWeek: Int, hourOfDay: Int): String {
         val day = getDayName(dayOfWeek)
         val period = when (hourOfDay) {
@@ -112,12 +107,23 @@ class DashboardViewModel(
         return "$day $period"
     }
 
-    /**
-     * Refresh dashboard data
-     */
     fun refresh() {
         _uiState.value = DashboardUiState.Loading
         loadDashboardData()
+        loadScheduledTrips()
+    }
+    private fun loadScheduledTrips() {
+        viewModelScope.launch {
+            repository.getScheduledTrips().collectLatest { trips ->
+                _scheduledTrips.value = trips
+            }
+        }
+    }
+    fun getAllStationNames(onResult: (List<String>) -> Unit) {
+        viewModelScope.launch {
+            val names = repository.getAllStationNames()
+            onResult(names)
+        }
     }
     fun deleteTripById(tripId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -129,5 +135,14 @@ class DashboardViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             repository.restoreTrip(tripId)
         }
+    }
+}
+class DashboardViewModelFactory(private val repository: DashboardRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return DashboardViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

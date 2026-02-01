@@ -2,7 +2,9 @@ package com.metro.delhimetrotracker.data.repository
 
 import android.util.Log
 import com.metro.delhimetrotracker.data.local.database.AppDatabase
+import com.metro.delhimetrotracker.data.local.database.entities.MetroStation // <--- ADD THIS
 import com.metro.delhimetrotracker.data.local.database.entities.StopTime
+import kotlinx.coroutines.flow.Flow // <--- ADD THIS
 import java.util.Calendar
 
 class MetroRepository(private val db: AppDatabase) {
@@ -100,5 +102,15 @@ class MetroRepository(private val db: AppDatabase) {
                     cal.get(Calendar.MINUTE)
 
         return stopTimeDao.getNextTrains(gtfsId, nowMinutes, 3)
+    }
+
+    // Fix: Using the imported MetroStation entity
+    suspend fun getAllStations(): List<MetroStation> {
+        return stationDao.getAllStations()
+    }
+
+    // Fix: Using the imported Flow and MetroStation
+    fun getStationsStream(): Flow<List<MetroStation>> {
+        return stationDao.getAllStationsFlow()
     }
 }

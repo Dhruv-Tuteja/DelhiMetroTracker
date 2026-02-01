@@ -40,7 +40,7 @@ class RoutePlanner(private val database: AppDatabase) {
         destId: String,
         preference: RoutePreference = RoutePreference.SHORTEST_PATH
     ): CompleteRoute? {
-        val allStations = database.metroStationDao().getAllStations().first()
+        val allStations = database.metroStationDao().getAllStationsFlow().first()
         val graph = buildGraph(allStations, preference)
 
         val distances = mutableMapOf<String, Int>().withDefault { Int.MAX_VALUE }

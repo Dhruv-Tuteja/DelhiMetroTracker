@@ -40,4 +40,11 @@
     <string name="manual_update_info">This will update your journey progress and notify your emergency contact.</string>
     <string name="cancel">Cancel</string>
     <string name="start_journey">Start Journey</string>
+
+    <string-array name="reminder_options">
+        <item>10 min before</item>
+        <item>20 min before</item>
+        <item>30 min before</item>
+        <item>1 hour before</item>
+    </string-array>
 </resources>

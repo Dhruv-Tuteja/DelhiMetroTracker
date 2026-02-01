@@ -36,6 +36,7 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/btnAppInfo"
         android:layout_width="56dp"
@@ -78,6 +79,7 @@
             android:layout_gravity="center"
             android:src="@drawable/ic_notification"
             app:tint="#64B5F6" />
+
     </com.google.android.material.card.MaterialCardView>
 
     <TextView

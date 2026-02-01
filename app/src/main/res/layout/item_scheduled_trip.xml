@@ -1,35 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scheduledTripCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="@color/background_card"
     app:cardElevation="2dp"
     app:cardCornerRadius="12dp"
-    app:cardBackgroundColor="@color/background_card"
     android:clickable="true"
     android:focusable="true"
     android:background="?attr/selectableItemBackground"
     app:strokeWidth="0dp">
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:padding="14dp">
 
-        <View
-            android:id="@+id/sosIndicator"
-            android:layout_width="4dp"
-            android:layout_height="match_parent"
-            android:background="@android:color/holo_red_dark"
-            android:visibility="gone"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-
-        <!-- Line Color Indicator Strip -->
+        <!-- Line Color Indicator Strip (same as trip card) -->
         <View
             android:id="@+id/viewLineIndicator"
             android:layout_width="4dp"
@@ -39,83 +30,68 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <!-- Source → Destination in one line -->
+        <!-- Time -->
         <TextView
-            android:id="@+id/tvSource"
+            android:id="@+id/tvScheduledTime"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:text="Dwarka Sector 21 → Rajiv Chowk"
+            android:text="9:00 AM"
+            android:textColor="@color/accent_blue"
             android:textSize="15sp"
             android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:ellipsize="end"
-            android:maxLines="1"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toEndOf="@id/viewLineIndicator"
-            app:layout_constraintEnd_toStartOf="@id/tvDuration"
+            app:layout_constraintEnd_toStartOf="@id/tvScheduleType"
             tools:ignore="HardcodedText" />
 
-        <!-- Duration -->
+        <!-- Schedule Type (Recurring Days) -->
         <TextView
-            android:id="@+id/tvDuration"
+            android:id="@+id/tvScheduleType"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="45m"
+            android:text="MON-FRI"
+            android:textColor="@color/metro_green"
             android:textSize="14sp"
             android:textStyle="bold"
-            android:textColor="@color/accent_blue"
             android:layout_marginStart="8dp"
-            app:layout_constraintTop_toTopOf="@id/tvSource"
+            app:layout_constraintTop_toTopOf="@id/tvScheduledTime"
             app:layout_constraintEnd_toEndOf="parent"
             tools:ignore="HardcodedText" />
 
-        <!-- Station Count -->
+        <!-- Route -->
         <TextView
-            android:id="@+id/tvStationCount"
-            android:layout_width="wrap_content"
+            android:id="@+id/tvScheduledRoute"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="12 stations"
-            android:textSize="12sp"
-            android:textColor="@color/text_secondary"
             android:layout_marginStart="12dp"
             android:layout_marginTop="6dp"
-            app:layout_constraintTop_toBottomOf="@id/tvSource"
+            android:text="Dwarka Sector 21 → Rajiv Chowk"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:ellipsize="end"
+            android:maxLines="1"
+            app:layout_constraintTop_toBottomOf="@id/tvScheduledTime"
             app:layout_constraintStart_toEndOf="@id/viewLineIndicator"
+            app:layout_constraintEnd_toEndOf="parent"
             tools:ignore="HardcodedText" />
 
-        <!-- Date/Time -->
+        <!-- Reminder Info -->
         <TextView
-            android:id="@+id/tvDateTime"
+            android:id="@+id/tvReminderInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_marginTop="6dp"
-            android:text="Jan 25, 09:30 AM"
+            android:text="⏰ 30 min before"
             android:textColor="@color/text_tertiary"
             android:textSize="11sp"
-            app:layout_constraintTop_toBottomOf="@id/tvStationCount"
+            app:layout_constraintTop_toBottomOf="@id/tvScheduledRoute"
             app:layout_constraintStart_toEndOf="@id/viewLineIndicator"
             app:layout_constraintBottom_toBottomOf="parent"
             tools:ignore="HardcodedText" />
 
-        <!-- Delay Badge -->
-        <TextView
-            android:id="@+id/tvDelayBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="+8m delay"
-            android:textSize="10sp"
-            android:textColor="#FFFFFF"
-            android:background="@drawable/badge_delay"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="4dp"
-            android:layout_marginStart="8dp"
-            android:visibility="gone"
-            app:layout_constraintTop_toTopOf="@id/tvDateTime"
-            app:layout_constraintBottom_toBottomOf="@id/tvDateTime"
-            app:layout_constraintStart_toEndOf="@id/tvDateTime"
-            tools:visibility="visible"
-            tools:ignore="HardcodedText" />
     </androidx.constraintlayout.widget.ConstraintLayout>
+
 </com.google.android.material.card.MaterialCardView>

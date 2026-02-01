@@ -21,36 +21,51 @@ class StationWithTimeAdapter(
 ) : RecyclerView.Adapter<StationWithTimeAdapter.StationViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): StationViewHolder {
+        // FIX 1: Change to your new layout name
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_station_checkpoint, parent, false)
+            .inflate(R.layout.item_timeline_station, parent, false)
         return StationViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: StationViewHolder, position: Int) {
-        holder.bind(stations[position], position + 1)
+        // FIX 2: Pass position flags to handle the timeline vertical lines
+        val isFirst = position == 0
+        val isLast = position == itemCount - 1
+        holder.bind(stations[position], isFirst, isLast)
     }
 
     override fun getItemCount(): Int = stations.size
 
     class StationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        // FIX 3: Map to the IDs present in item_timeline_station.xml
         private val tvStationName: TextView = itemView.findViewById(R.id.tvStationName)
-        private val tvStationTime: TextView = itemView.findViewById(R.id.tvStationTime)
-        private val tvStationNumber: TextView = itemView.findViewById(R.id.tvStationNumber)
-        private val viewLineIndicator: View = itemView.findViewById(R.id.viewLineIndicator)
+        private val tvTime: TextView = itemView.findViewById(R.id.tvTime)
+        private val viewLineTop: View = itemView.findViewById(R.id.viewLineTop)
+        private val viewLineBottom: View = itemView.findViewById(R.id.viewLineBottom)
+        private val ivDot: View = itemView.findViewById(R.id.ivDot)
 
-        fun bind(station: StationWithTime, position: Int) {
+        fun bind(station: StationWithTime, isFirst: Boolean, isLast: Boolean) {
             tvStationName.text = station.stationName
 
             val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-            tvStationTime.text = timeFormat.format(station.arrivalTime)
+            tvTime.text = timeFormat.format(station.arrivalTime)
 
-            tvStationNumber.text = position.toString()
+            // Timeline UI: Logic to hide line segments at start and end
+            viewLineTop.visibility = if (isFirst) View.INVISIBLE else View.VISIBLE
+            viewLineBottom.visibility = if (isLast) View.INVISIBLE else View.VISIBLE
 
-            // Parse line color
+            // Set the color of the vertical lines and dot based on the Metro Line color
             try {
-                viewLineIndicator.setBackgroundColor(Color.parseColor(station.lineColor))
+                val color = Color.parseColor(station.lineColor)
+                viewLineTop.setBackgroundColor(color)
+                viewLineBottom.setBackgroundColor(color)
+                // If ivDot is an ImageView, use setColorFilter. If it's a View, use setBackgroundColor.
+                ivDot.setBackgroundColor(color)
             } catch (e: Exception) {
-                viewLineIndicator.setBackgroundColor(Color.parseColor("#0066CC"))
+                val defaultColor = Color.parseColor("#0066CC")
+                viewLineTop.setBackgroundColor(defaultColor)
+                viewLineBottom.setBackgroundColor(defaultColor)
+                ivDot.setBackgroundColor(defaultColor)
             }
         }
     }

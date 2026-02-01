@@ -23,6 +23,11 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+
     <queries>
         <package android:name="com.sraoss.dmrc" />
     </queries>
@@ -64,6 +69,11 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <receiver
+            android:name=".receivers.ScheduledTripReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
     </application>
 </manifest>

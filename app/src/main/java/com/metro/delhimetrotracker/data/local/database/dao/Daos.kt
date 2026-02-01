@@ -157,6 +157,12 @@ interface TripDao {
     @Query("SELECT * FROM trips WHERE syncState = 'CONFLICT'")
     fun getConflictedTrips(): Flow<List<Trip>>
 
+    @Query("UPDATE trips SET isDeleted = 1 WHERE id = :id")
+    suspend fun markTripAsDeleted(id: Long)
+
+    @Query("UPDATE trips SET isDeleted = 0 WHERE id = :id")
+    suspend fun restoreTrip(id: Long)
+
 }
 
 @Dao
@@ -192,8 +198,9 @@ interface MetroStationDao {
     @Query("SELECT * FROM metro_stations WHERE stationId = :stationId LIMIT 1")
     suspend fun getStationById(stationId: String): MetroStation?
 
+    // --- RENAMED TO AVOID CONFLICT ---
     @Query("SELECT * FROM metro_stations")
-    fun getAllStations(): Flow<List<MetroStation>>
+    fun getAllStationsFlow(): Flow<List<MetroStation>>
 
     // Used for the AutoComplete search in the dialog
     @Query("SELECT * FROM metro_stations WHERE stationName LIKE '%' || :query || '%'")
@@ -204,18 +211,18 @@ interface MetroStationDao {
 
     @Query("SELECT COUNT(*) FROM metro_stations")
     suspend fun getStationCount(): Int
-    /**
-     * ESSENTIAL FOR INTERCHANGES (BFS)
-     * This query finds stations that are physically connected:
-     * 1. Stations on the same line with +/- 1 sequence number.
-     * 2. Stations with the same name but different IDs (Interchange points).
-     */
+
     @Query("""
         SELECT * FROM metro_stations 
         WHERE (metroLine = :line AND (sequenceNumber = :seq + 1 OR sequenceNumber = :seq - 1))
         OR (stationName = :name AND stationId != :currentId)
     """)
     suspend fun getAdjacentStations(line: String, seq: Int, name: String, currentId: String): List<MetroStation>
+
+    // --- FIX: RENAMED FROM 'getAllStation' TO 'getAllStations' ---
+    // --- FIX: This is the one MainActivity needs ---
+    @Query("SELECT * FROM metro_stations ORDER BY stationName ASC")
+    suspend fun getAllStations(): List<MetroStation>
 
 }
 @Dao
@@ -339,4 +346,38 @@ LIMIT 1
 
     @Query("SELECT * FROM stop_times WHERE stop_id = :stopId LIMIT 5")
     suspend fun getAnySampleTrains(stopId: String): List<StopTime>
+}
+
+@Dao
+interface ScheduledTripDao {
+
+    @Query("SELECT * FROM scheduled_trips WHERE isActive = 1 AND isDeleted = 0 ORDER BY scheduledTimeHour, scheduledTimeMinute")
+    fun getAllActiveScheduledTrips(): Flow<List<ScheduledTrip>>
+
+    @Query("SELECT * FROM scheduled_trips WHERE id = :id")
+    suspend fun getScheduledTripById(id: Long): ScheduledTrip?
+
+    @Insert
+    suspend fun insert(scheduledTrip: ScheduledTrip): Long
+
+    @Update
+    suspend fun update(scheduledTrip: ScheduledTrip)
+
+    @Delete
+    suspend fun delete(scheduledTrip: ScheduledTrip)
+
+    @Query("UPDATE scheduled_trips SET isActive = 0 WHERE id = :id")
+    suspend fun deactivate(id: Long)
+
+    @Query("DELETE FROM scheduled_trips WHERE isActive = 0 AND scheduledDate < :timestamp")
+    suspend fun deleteExpiredOneTimeTrips(timestamp: Long)
+
+    @Query("DELETE FROM scheduled_trips")
+    suspend fun deleteAll()
+
+    @Query("SELECT * FROM scheduled_trips WHERE syncState = 'PENDING'")
+    fun getPendingScheduledTrips(): Flow<List<ScheduledTrip>>
+
+    @Query("UPDATE scheduled_trips SET syncState = :newState, lastModified = :timestamp WHERE id = :id")
+    suspend fun updateSyncStatus(id: Long, newState: String, timestamp: Long = System.currentTimeMillis())
 }
