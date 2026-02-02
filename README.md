@@ -7,7 +7,7 @@
 ![Language](https://img.shields.io/badge/Language-Kotlin-blue.svg)
 ![Architecture](https://img.shields.io/badge/Architecture-MVVM-orange.svg)
 
-*Your intelligent companion for safe and smart Delhi Metro travel*
+*Your companion for safe and smart Delhi Metro travel*
 
 [Features](#-features) • [Screenshots](#-screenshots) • [Tech Stack](#-tech-stack) • [Architecture](#-architecture) • [Getting Started](#-getting-started) • [Contributing](#-contributing)
 
