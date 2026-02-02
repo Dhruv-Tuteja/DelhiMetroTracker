@@ -798,7 +798,7 @@ class MainActivity : AppCompatActivity() {
             if (activeTrip != null) {
                 withContext(Dispatchers.Main) {
                     val intent = Intent(this@MainActivity, TrackingActivity::class.java).apply {
-                        putExtra("TRIP_ID", activeTrip.id)
+                        putExtra("EXTRA_TRIP_ID", activeTrip.id)
                         // If your Trip entity stores Source/Dest IDs, pass them too:
                         putExtra("SOURCE_ID", activeTrip.sourceStationId)
                         putExtra("DEST_ID", activeTrip.destinationStationId)
