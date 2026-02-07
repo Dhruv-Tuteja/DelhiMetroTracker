@@ -49,6 +49,8 @@ class JourneyTrackingService : LifecycleService() {
     private lateinit var smsHelper: SmsHelper
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var vibrator: Vibrator
+    private var lastLatitude: Double? = null
+    private var lastLongitude: Double? = null
 
     private var currentTrip: Trip? = null
     private var currentStationIndex = 0
@@ -317,6 +319,10 @@ class JourneyTrackingService : LifecycleService() {
             try {
                 val currentLocation =
                     location ?: fusedLocationClient.lastLocation.await() ?: return@launch
+
+                lastLatitude = currentLocation.latitude
+                lastLongitude = currentLocation.longitude
+
 
                 // 🔹 1. Build candidate stations (max 4)
                 val candidates = stationRoute
@@ -851,10 +857,25 @@ Trip tracking has been terminated. Please contact the traveler immediately.
         } else {
             "Unknown Location"
         }
+        val locationString = if (lastLatitude != null && lastLongitude != null) {
+            "https://maps.google.com/?q=$lastLatitude,$lastLongitude"
+        } else {
+            "Location unavailable"
+        }
 
         // Send emergency SMS
-        val sosMessage = "🆘 AUTO-SOS ALERT: ${trip.sourceStationName} → ${trip.destinationStationName}. " +
-                "Last known location: $currentStation. No station update for 15+ minutes. Please check immediately!"
+        val sosMessage = """
+🆘 AUTO-SOS ALERT
+
+Trip: ${trip.sourceStationName} → ${trip.destinationStationName}
+Last Known Station: $currentStation
+Live Location:
+$locationString
+
+No station update for 15+ minutes.
+Please check immediately.
+""".trimIndent()
+
 
         smsHelper.sendSms(emergencyContact, sosMessage)
 
