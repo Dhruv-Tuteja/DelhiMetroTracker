@@ -306,87 +306,111 @@ class JourneyTrackingService : LifecycleService() {
         }
     }
 
-    private fun handleStationDetection(method: DetectionMethod, confidence: Float, location: Location? = null) {
+    private fun handleStationDetection(
+        method: DetectionMethod,
+        confidence: Float,
+        location: Location? = null
+    ) {
         if (!isTracking || stationRoute.isEmpty()) return
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val nextStation = stationRoute.getOrNull(currentStationIndex) ?: return@launch
-            if (lastDetectedStationId == nextStation.stationId) return@launch
-
             try {
-                val currentLocation = location ?: fusedLocationClient.lastLocation.await() ?: return@launch
+                val currentLocation =
+                    location ?: fusedLocationClient.lastLocation.await() ?: return@launch
 
-                val distance = FloatArray(1)
-                Location.distanceBetween(
-                    currentLocation.latitude, currentLocation.longitude,
-                    nextStation.latitude, nextStation.longitude,
-                    distance
-                )
+                // 🔹 1. Build candidate stations (max 4)
+                val candidates = stationRoute
+                    .drop(currentStationIndex)
+                    .take(4)
+                    .ifEmpty { return@launch }
 
-                if (distance[0] > 200f) return@launch
+                var bestMatch: MetroStation? = null
+                var bestIndex = -1
+                var bestDistance = Float.MAX_VALUE
 
-                // 🔍 DEBUG LOG
-                Log.d(TAG, "STATION DETECTED: ${nextStation.stationName} (ID: ${nextStation.stationId}) at index $currentStationIndex")
-
-                if (isSmsEnabled()) {
-                    smsHelper.sendStationAlert(
-                        currentTrip!!.emergencyContact,
-                        nextStation.stationName,
-                        currentStationIndex + 1,
-                        stationRoute.size,
-                        stationRoute.getOrNull(currentStationIndex + 1)?.stationName,
-                        currentStationIndex == stationRoute.size - 1
+                // 🔹 2. Check distance for each candidate
+                candidates.forEachIndexed { offset, station ->
+                    val result = FloatArray(1)
+                    Location.distanceBetween(
+                        currentLocation.latitude,
+                        currentLocation.longitude,
+                        station.latitude,
+                        station.longitude,
+                        result
                     )
+
+                    val distance = result[0]
+
+                    if (distance <= 200f && distance < bestDistance) {
+                        bestMatch = station
+                        bestIndex = currentStationIndex + offset
+                        bestDistance = distance
+                    }
                 }
 
+                // 🔹 3. No station detected → exit
+                if (bestMatch == null || bestIndex < currentStationIndex) return@launch
 
-                if (currentStationIndex == stationRoute.size - 2) triggerVibration()
+                val trip = currentTrip ?: return@launch
 
-                lastDetectedStationId = nextStation.stationId
-                lastStationDetectionTime = System.currentTimeMillis() // ADD THIS LINE
-
-                currentStationIndex++
-
-                val updatedVisited = currentTrip!!.visitedStations.toMutableList().apply {
-                    add(nextStation.stationId)
-                }
-
-                // 🔍 DEBUG LOG
-                Log.d(TAG, "Updated visitedStations: $updatedVisited")
-
-                val updatedJson = org.json.JSONArray(updatedVisited).toString()
-                database.tripDao().updateVisitedStations(currentTrip!!.id, updatedJson)
-                currentTrip = currentTrip!!.copy(visitedStations = updatedVisited)
-
-                val checkpoint = StationCheckpoint(
-                    tripId = currentTrip!!.id,
-                    stationId = nextStation.stationId,
-                    stationName = nextStation.stationName,
-                    stationOrder = currentStationIndex, // 1-based index or 0-based as you prefer
-                    arrivalTime = Date(), // <--- THIS CAPTURES THE TIMESTAMP
-                    detectionMethod = method,
-                    confidence = confidence,
-                    latitude = location?.latitude,
-                    longitude = location?.longitude
+                Log.d(
+                    TAG,
+                    "STATION DETECTED: ${bestMatch!!.stationName} at index $bestIndex (distance=${bestDistance}m)"
                 )
 
-                database.stationCheckpointDao().insertCheckpoint(checkpoint)
+                // 🔹 4. Build updated visited stations
+                val newVisited = stationRoute
+                    .subList(0, bestIndex + 1)
+                    .map { it.stationId }
 
-                Log.d(TAG, "✅ Checkpoint saved: ${nextStation.stationName} at ${Date()}")
+                val json = JSONArray(newVisited).toString()
+
+                database.tripDao().updateVisitedStations(trip.id, json)
+                database.tripDao().updateSyncStatus(trip.id, "PENDING", System.currentTimeMillis())
+
+                currentTrip = trip.copy(visitedStations = newVisited)
+
+                // 🔹 5. Insert checkpoints for skipped stations
+                for (i in currentStationIndex..bestIndex) {
+                    val station = stationRoute[i]
+
+                    val checkpoint = StationCheckpoint(
+                        tripId = trip.id,
+                        stationId = station.stationId,
+                        stationName = station.stationName,
+                        stationOrder = i,
+                        arrivalTime = Date(),
+                        detectionMethod = method,
+                        confidence = confidence,
+                        latitude = currentLocation.latitude,
+                        longitude = currentLocation.longitude
+                    )
+
+                    database.stationCheckpointDao().insertCheckpoint(checkpoint)
+
+                    Log.d(TAG, "Checkpoint saved → ${station.stationName}")
+                }
+
+                currentStationIndex = bestIndex + 1
+                lastDetectedStationId = bestMatch!!.stationId
+                lastStationDetectionTime = System.currentTimeMillis()
 
                 withContext(Dispatchers.Main) {
-                    updateNotification("Current: ${nextStation.stationName}")
+                    updateNotification("Current: ${bestMatch!!.stationName}")
                 }
 
-                if (nextStation.stationId == currentTrip!!.destinationStationId) {
-                    delay(2000)
+                // 🔹 6. End journey if destination reached
+                if (bestMatch!!.stationId == trip.destinationStationId) {
+                    delay(1500)
                     stopJourneyTracking()
                 }
+
             } catch (e: Exception) {
-                Log.e(TAG, "Detection error", e)
+                Log.e(TAG, "Station detection error", e)
             }
         }
     }
+
 
     private fun startLocationUpdates() {
         // FIXED: Added permission check
