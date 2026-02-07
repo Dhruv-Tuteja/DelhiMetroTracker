@@ -18,10 +18,10 @@ interface TripDao {
     @Query("DELETE FROM trips WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("SELECT * FROM trips WHERE id = :tripId")
+    @Query("SELECT * FROM trips WHERE id = :tripId AND isDeleted = 0" )
     suspend fun getTripById(tripId: Long): Trip?
 
-    @Query("SELECT * FROM trips WHERE id = :tripId")
+    @Query("SELECT * FROM trips WHERE id = :tripId AND isDeleted = 0")
     fun getTripByIdFlow(tripId: Long): Flow<Trip?>
 
     // Room uses the Date-to-Long TypeConverter automatically for :status parameters
@@ -42,10 +42,6 @@ interface TripDao {
 
     @Query("SELECT * FROM trips WHERE status = 'IN_PROGRESS' AND isDeleted = 0 LIMIT 1")
     fun getActiveTripFlow(): Flow<Trip?>
-
-    // Use Long for time parameters in raw queries if Room's auto-conversion is strict
-//    @Query("UPDATE trips SET status = :status, endTime = :endTime, durationMinutes = :duration WHERE id = :tripId")
-//    suspend fun completeTrip(tripId: Long, status: TripStatus, endTime: Long, duration: Int)
 
     @Query("SELECT COUNT(*) FROM trips WHERE status = 'COMPLETED'AND isDeleted = 0")
     fun getCompletedTripsCount(): Flow<Int>
@@ -163,6 +159,36 @@ interface TripDao {
     @Query("UPDATE trips SET isDeleted = 0 WHERE id = :id")
     suspend fun restoreTrip(id: Long)
 
+    // Add these methods to your existing TripDao interface
+
+// For TripDao.kt - Add these methods to your existing interface:
+
+    @Query("DELETE FROM trips WHERE startTime < :cutoffTimestamp AND isDeleted = 0")
+    suspend fun deleteTripsOlderThan(cutoffTimestamp: Long): Int
+
+    @Query("SELECT * FROM trips WHERE isDeleted = 0 ORDER BY startTime DESC")
+    suspend fun getAllTripsS(): List<Trip>
+
+    @Query("SELECT * FROM trips WHERE isDeleted = 0 AND startTime >= :startDate AND startTime <= :endDate ORDER BY startTime DESC")
+    suspend fun getTripsBetweenDates(startDate: Long, endDate: Long): List<Trip>
+
+    @Query("SELECT COUNT(*) FROM trips WHERE isDeleted = 0")
+    suspend fun getTotalTripsCount(): Int
+
+    @Query("SELECT SUM(durationMinutes) FROM trips WHERE isDeleted = 0 AND status = 'COMPLETED'")
+    suspend fun getTotalTravelTimeMinutes(): Int?
+
+    @Query("SELECT * FROM trips WHERE id = :tripId")
+    suspend fun getTripByIdIncludingDeleted(tripId: Long): Trip?
+
+    @Query("""
+    SELECT * FROM trips 
+    WHERE status = 'COMPLETED' 
+    AND isDeleted = 0 
+    ORDER BY startTime DESC
+""")
+    fun getCompletedTripsSafe(): Flow<List<Trip>>
+
 }
 
 @Dao
@@ -190,6 +216,10 @@ interface StationCheckpointDao {
 
     @Query("DELETE FROM station_checkpoints WHERE tripId = :tripId")
     suspend fun deleteCheckpointsByTrip(tripId: Long)
+
+    @Query("SELECT * FROM station_checkpoints WHERE tripId = :tripId ORDER BY stationOrder ASC")
+    fun getCheckpointsForTripFlow(tripId: Long): Flow<List<StationCheckpoint>>
+
 }
 
 @Dao
@@ -222,10 +252,18 @@ interface MetroStationDao {
     """)
     suspend fun getAdjacentStations(line: String, seq: Int, name: String, currentId: String): List<MetroStation>
 
-    // --- FIX: RENAMED FROM 'getAllStation' TO 'getAllStations' ---
-    // --- FIX: This is the one MainActivity needs ---
     @Query("SELECT * FROM metro_stations ORDER BY stationName ASC")
     suspend fun getAllStations(): List<MetroStation>
+
+    @Query("""
+    SELECT * FROM metro_stations 
+    WHERE latitude BETWEEN :lat - 0.025 AND :lat + 0.025 
+    AND longitude BETWEEN :lng - 0.025 AND :lng + 0.025
+    ORDER BY 
+        ((latitude - :lat) * (latitude - :lat) + 
+         (longitude - :lng) * (longitude - :lng)) ASC
+""")
+    suspend fun getNearbyStations(lat: Double, lng: Double): List<MetroStation>
 
 }
 @Dao
@@ -242,14 +280,55 @@ interface UserSettingsDao {
     @Query("SELECT * FROM user_settings WHERE id = 1")
     suspend fun getSettingsOnce(): UserSettings?
 
-    @Query("UPDATE user_settings SET emergencyContact = :contact, emergencyContactName = :name WHERE id = 1")
-    suspend fun updateEmergencyContact(contact: String, name: String?)
+    @Query("UPDATE user_settings SET emergencyContact = :contact WHERE id = 1")
+    suspend fun updateEmergencyContact(contact: String)
 
     @Query("UPDATE user_settings SET smsEnabled = :enabled WHERE id = 1")
     suspend fun setSmsEnabled(enabled: Boolean)
 
     @Query("UPDATE user_settings SET vibrationEnabled = :enabled WHERE id = 1")
     suspend fun setVibrationEnabled(enabled: Boolean)
+
+    @Query("SELECT * FROM user_settings WHERE id = 1")
+    fun getUserSettings(): Flow<UserSettings?>
+
+    @Query("SELECT * FROM user_settings WHERE id = 1")
+    suspend fun getUserSettingsOnce(): UserSettings?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(settings: UserSettings)
+
+    @Update
+    suspend fun update(settings: UserSettings)
+
+    @Query("UPDATE user_settings SET darkMode = :darkMode WHERE id = 1")
+    suspend fun updateDarkMode(darkMode: Boolean)
+
+    @Query("UPDATE user_settings SET smsEnabled = :enabled WHERE id = 1")
+    suspend fun updateSmsEnabled(enabled: Boolean)
+
+    @Query("UPDATE user_settings SET notificationEnabled = :enabled WHERE id = 1")
+    suspend fun updateNotificationEnabled(enabled: Boolean)
+
+    @Query("UPDATE user_settings SET vibrationEnabled = :enabled WHERE id = 1")
+    suspend fun updateVibrationEnabled(enabled: Boolean)
+
+    @Query("UPDATE user_settings SET soundEnabled = :enabled WHERE id = 1")
+    suspend fun updateSoundEnabled(enabled: Boolean)
+
+    @Query("UPDATE user_settings SET language = :language WHERE id = 1")
+    suspend fun updateLanguage(language: String)
+
+    @Query("UPDATE user_settings SET detectionSensitivity = :sensitivity WHERE id = 1")
+    suspend fun updateDetectionSensitivity(sensitivity: Float)
+
+    @Transaction
+    suspend fun initializeDefaultSettings() {
+        val existing = getUserSettingsOnce()
+        if (existing == null) {
+            insert(UserSettings())
+        }
+    }
 }
 
 // ... existing UserSettingsDao interface ...
@@ -280,8 +359,6 @@ interface StopTimeDao {
     suspend fun getNextTrains(gtfsStopId: String, currentMinutes: Int, limit: Int): List<StopTime>
 
 
-    // In Daos.kt -> StopTimeDao
-
     // Finds the most recent train that has already passed
     @Query("SELECT * FROM stop_times WHERE stop_id = :gtfsStopId AND arrival_minutes < :currentMinutes ORDER BY arrival_minutes DESC LIMIT 1")
     suspend fun getPreviousTrain(gtfsStopId: String, currentMinutes: Int): StopTime?
@@ -301,7 +378,6 @@ interface StopTimeDao {
         gtfsStopId: String
     ): StopTime?
 
-    // In Daos.kt -> StopTimeDao
 
     // Finds a train that connects Current Station -> Next Station (Correct Direction)
     @Query("""
@@ -383,4 +459,7 @@ interface ScheduledTripDao {
 
     @Query("UPDATE scheduled_trips SET syncState = :newState, lastModified = :timestamp WHERE id = :id")
     suspend fun updateSyncStatus(id: Long, newState: String, timestamp: Long = System.currentTimeMillis())
+
+    @Query("DELETE FROM scheduled_trips")
+    suspend fun deleteAllScheduledTrips()
 }

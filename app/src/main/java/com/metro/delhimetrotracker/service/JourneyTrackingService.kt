@@ -17,8 +17,6 @@ import com.metro.delhimetrotracker.MetroTrackerApplication
 import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.AppDatabase
 import com.metro.delhimetrotracker.data.local.database.entities.*
-import com.metro.delhimetrotracker.utils.MetroNavigator
-import com.metro.delhimetrotracker.utils.sensors.StationDetector
 import com.metro.delhimetrotracker.utils.sms.SmsHelper
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
@@ -37,6 +35,10 @@ import androidx.work.*
 import com.metro.delhimetrotracker.worker.SyncWorker
 import java.util.concurrent.TimeUnit
 import org.json.JSONArray
+import kotlinx.coroutines.flow.firstOrNull
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+
 /**
  * Production Foreground service for Delhi Metro Tracking.
  * Uses LifecycleService to provide easy access to lifecycleScope for DB operations.
@@ -44,7 +46,6 @@ import org.json.JSONArray
 class JourneyTrackingService : LifecycleService() {
 
     private lateinit var database: AppDatabase
-    private lateinit var stationDetector: StationDetector
     private lateinit var smsHelper: SmsHelper
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var vibrator: Vibrator
@@ -60,6 +61,9 @@ class JourneyTrackingService : LifecycleService() {
     private var lastPressTime = 0L
 
     private var routePreference: RoutePlanner.RoutePreference = RoutePlanner.RoutePreference.SHORTEST_PATH
+
+    private var lastStationDetectionTime: Long = System.currentTimeMillis()
+    private var autoSosCheckJob: Job? = null
 
     companion object {
         private const val TAG = "JourneyTrackingService"
@@ -77,10 +81,29 @@ class JourneyTrackingService : LifecycleService() {
         private const val LOCATION_FASTEST_INTERVAL = 5000L
     }
 
+    fun shouldAutoSync(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+        // 1️⃣ Check Auto Sync toggle
+        val autoSync = prefs.getBoolean("auto_sync", true)
+        if (!autoSync) return false
+
+        // 2️⃣ Check Wi-Fi only toggle
+        val wifiOnly = prefs.getBoolean("wifi_only_sync", false)
+        if (!wifiOnly) return true   // Wi-Fi not required → allow sync
+
+        // 3️⃣ Wi-Fi required → check network
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    }
+
+
     override fun onCreate() {
         super.onCreate()
         database = (application as MetroTrackerApplication).database
-        stationDetector = StationDetector(this)
         smsHelper = SmsHelper(applicationContext)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -100,6 +123,7 @@ class JourneyTrackingService : LifecycleService() {
         registerReceiver(powerButtonReceiver, filter)
     }
     override fun onDestroy() {
+        setTripActive(false)
         super.onDestroy()
         try {
             unregisterReceiver(powerButtonReceiver)
@@ -107,6 +131,14 @@ class JourneyTrackingService : LifecycleService() {
             // Receiver not registered
         }
     }
+    private suspend fun isSmsEnabled(): Boolean {
+        return database.userSettingsDao()
+            .getUserSettings()
+            .firstOrNull()
+            ?.smsEnabled
+            ?: true // default = enabled
+    }
+
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
@@ -169,6 +201,8 @@ class JourneyTrackingService : LifecycleService() {
                 currentStationIndex = 0
 
                 isTracking = true
+                setTripActive(true)
+
 
                 withContext(Dispatchers.Main) {
                     val notification = createNotification()
@@ -178,26 +212,29 @@ class JourneyTrackingService : LifecycleService() {
                         startForeground(NOTIFICATION_ID, notification)
                     }
                     startLocationUpdates()
+                    startAutoSosMonitoring()
                 }
 
-                // Safety: Delay accelerometer to prevent false triggers during boarding
-                launch {
-                    delay(15000)
-                    startAccelerometerMonitoring()
+                if (isSmsEnabled()) {
+                    smsHelper.sendJourneyStartAlert(
+                        phoneNumber = currentTrip!!.emergencyContact,
+                        source = currentTrip!!.sourceStationName,
+                        dest = currentTrip!!.destinationStationName,
+                        estDuration = stationRoute.size * 2
+                    )
                 }
-
-                // Initial Alert - FIXED: Changed parameter names to match SmsHelper
-                smsHelper.sendJourneyStartAlert(
-                    phoneNumber = currentTrip!!.emergencyContact,
-                    source = currentTrip!!.sourceStationName,
-                    dest = currentTrip!!.destinationStationName,
-                    estDuration = stationRoute.size * 2
-                )
             } catch (e: Exception) {
                 Log.e(TAG, "Start error", e)
             }
         }
     }
+    private fun setTripActive(active: Boolean) {
+        getSharedPreferences("trip_state", MODE_PRIVATE)
+            .edit()
+            .putBoolean("is_trip_active", active)
+            .apply()
+    }
+
 
     private fun handleManualJump(targetStationId: String, timeOffset: String) {
 
@@ -245,12 +282,15 @@ class JourneyTrackingService : LifecycleService() {
                 val targetStation = stationRoute[targetIndex]
                 val smsMessage = "Manual Update: Reached ${targetStation.stationName} ($timeOffset). Tracking resumed."
 
-                if (trip.emergencyContact.isNotEmpty()) {
+                if (trip.emergencyContact.isNotEmpty() && isSmsEnabled()) {
                     smsHelper.sendSms(trip.emergencyContact, smsMessage)
                 }
 
+
                 currentStationIndex = targetIndex + 1
                 lastDetectedStationId = targetStationId
+                lastStationDetectionTime = System.currentTimeMillis() // ADD THIS LINE
+
 
                 withContext(Dispatchers.Main) {
                     updateNotification("Jumped to: ${targetStation.stationName}")
@@ -288,19 +328,23 @@ class JourneyTrackingService : LifecycleService() {
                 // 🔍 DEBUG LOG
                 Log.d(TAG, "STATION DETECTED: ${nextStation.stationName} (ID: ${nextStation.stationId}) at index $currentStationIndex")
 
-                // Send SMS Alert
-                smsHelper.sendStationAlert(
-                    currentTrip!!.emergencyContact,
-                    nextStation.stationName,
-                    currentStationIndex + 1,
-                    stationRoute.size,
-                    stationRoute.getOrNull(currentStationIndex + 1)?.stationName,
-                    currentStationIndex == stationRoute.size - 1
-                )
+                if (isSmsEnabled()) {
+                    smsHelper.sendStationAlert(
+                        currentTrip!!.emergencyContact,
+                        nextStation.stationName,
+                        currentStationIndex + 1,
+                        stationRoute.size,
+                        stationRoute.getOrNull(currentStationIndex + 1)?.stationName,
+                        currentStationIndex == stationRoute.size - 1
+                    )
+                }
+
 
                 if (currentStationIndex == stationRoute.size - 2) triggerVibration()
 
                 lastDetectedStationId = nextStation.stationId
+                lastStationDetectionTime = System.currentTimeMillis() // ADD THIS LINE
+
                 currentStationIndex++
 
                 val updatedVisited = currentTrip!!.visitedStations.toMutableList().apply {
@@ -398,16 +442,6 @@ class JourneyTrackingService : LifecycleService() {
         }
     }
 
-    private fun startAccelerometerMonitoring() {
-        lifecycleScope.launch {
-            stationDetector.monitorAccelerometer().collect { event ->
-                if (event.isAtStation && event.confidence > 0.7f) {
-                    handleStationDetection(DetectionMethod.ACCELEROMETER, event.confidence)
-                }
-            }
-        }
-    }
-
     private fun stopJourneyTracking() {
         isTracking = false
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -468,11 +502,14 @@ class JourneyTrackingService : LifecycleService() {
                         "Journey ended at $actualEndStation ($visitedCount/$totalCount stations covered)."
                 }
 
-                smsHelper.sendSms(trip.emergencyContact, message)
+                if (isSmsEnabled()) {
+                    smsHelper.sendSms(trip.emergencyContact, message)
+                }
 
                 withContext(Dispatchers.Main) {
                     val intent = Intent("ACTION_JOURNEY_STOPPED")
                     sendBroadcast(intent)
+                    setTripActive(false)
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 }
@@ -650,7 +687,9 @@ Trip tracking has been terminated. Please contact the traveler immediately.
 - Delhi Metro Tracker Security
                     """.trimIndent()
 
-                    smsHelper.sendSms(trip.emergencyContact, alertMessage)
+                    if (isSmsEnabled()) {
+                        smsHelper.sendSms(trip.emergencyContact, alertMessage)
+                    }
                     Log.d(TAG, "Mock location alert sent to ${trip.emergencyContact}")
 
                     // Mark trip as cancelled in database
@@ -702,10 +741,152 @@ Trip tracking has been terminated. Please contact the traveler immediately.
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
 
-        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-            "TripSync",
-            ExistingWorkPolicy.KEEP,
-            syncRequest
-        )
+        if (shouldAutoSync(applicationContext)) {
+            WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                "TripSync",
+                ExistingWorkPolicy.KEEP,
+                syncRequest
+            )
+        } else {
+            Log.d("Sync", "Auto-sync skipped due to settings")
+        }
+    }
+    private fun startAutoSosMonitoring() {
+        // Cancel any existing monitoring
+        autoSosCheckJob?.cancel()
+
+        // Check every minute if auto-SOS should trigger
+        autoSosCheckJob = lifecycleScope.launch(Dispatchers.IO) {
+            while (isActive && isTracking) {
+                delay(60_000) // Check every 1 minute
+                checkAutoSos()
+            }
+        }
+    }
+
+    private fun stopAutoSosMonitoring() {
+        autoSosCheckJob?.cancel()
+        autoSosCheckJob = null
+    }
+
+    private fun checkAutoSos() {
+        // Check if auto-SOS is enabled in settings
+        val sosEnabled = getSharedPreferences("settings", MODE_PRIVATE)
+            .getBoolean("sos_enabled", false)
+        val autoSosEnabled = getSharedPreferences("settings", MODE_PRIVATE)
+            .getBoolean("auto_sos_enabled", false)
+
+        // If either SOS or auto-SOS is disabled, don't check
+        if (!sosEnabled || !autoSosEnabled) {
+            Log.d(TAG, "Auto-SOS is disabled in settings")
+            return
+        }
+
+        // Check if journey is in progress
+        if (!isTracking || currentTrip == null) {
+            Log.d(TAG, "Auto-SOS check: No active journey")
+            return
+        }
+
+        // Check if we've reached the destination
+        if (currentStationIndex >= stationRoute.size) {
+            Log.d(TAG, "Auto-SOS check: Journey completed")
+            return
+        }
+
+        val currentTime = System.currentTimeMillis()
+        val timeSinceLastStation = currentTime - lastStationDetectionTime
+        val fifteenMinutes = 15 * 60 * 1000L // 15 minutes in milliseconds
+
+        Log.d(TAG, "Auto-SOS check: ${timeSinceLastStation / 1000 / 60} minutes since last station")
+
+        if (timeSinceLastStation > fifteenMinutes) {
+            Log.w(TAG, "⚠️ AUTO-SOS TRIGGERED: No station detected for 15+ minutes")
+
+            // Trigger SOS on main thread
+            lifecycleScope.launch(Dispatchers.Main) {
+                triggerAutoSos()
+            }
+        }
+    }
+
+    private fun triggerAutoSos() {
+        val trip = currentTrip ?: return
+        val emergencyContact = trip.emergencyContact
+
+        if (emergencyContact.isEmpty()) {
+            Log.e(TAG, "Cannot trigger auto-SOS: No emergency contact set")
+            return
+        }
+
+        Log.e(TAG, "🆘 AUTO-SOS TRIGGERED - Sending emergency alert")
+
+        // Get current station info
+        val currentStation = if (currentStationIndex > 0 && currentStationIndex <= stationRoute.size) {
+            stationRoute[currentStationIndex - 1].stationName
+        } else {
+            "Unknown Location"
+        }
+
+        // Send emergency SMS
+        val sosMessage = "🆘 AUTO-SOS ALERT: ${trip.sourceStationName} → ${trip.destinationStationName}. " +
+                "Last known location: $currentStation. No station update for 15+ minutes. Please check immediately!"
+
+        smsHelper.sendSms(emergencyContact, sosMessage)
+
+        // Make emergency call
+        try {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.CALL_PHONE
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                val callIntent = Intent(Intent.ACTION_CALL).apply {
+                    data = android.net.Uri.parse("tel:$emergencyContact")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                startActivity(callIntent)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to make emergency call", e)
+        }
+
+        // Update notification
+        updateNotification("🆘 AUTO-SOS TRIGGERED - Emergency alert sent")
+
+        // Vibrate strongly
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(
+                    VibrationEffect.createWaveform(
+                        longArrayOf(0, 500, 200, 500, 200, 500),
+                        -1
+                    )
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(longArrayOf(0, 500, 200, 500, 200, 500), -1)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Vibration failed", e)
+        }
+
+        // Show notification to user
+        Toast.makeText(
+            this,
+            "🆘 Auto-SOS triggered - Emergency contact notified",
+            Toast.LENGTH_LONG
+        ).show()
+
+        // Open TrackingActivity so user can see what happened
+        val trackingIntent = Intent(this, TrackingActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("AUTO_SOS_TRIGGERED", true)
+            putExtra("EXTRA_TRIP_ID", trip.id)
+        }
+        startActivity(trackingIntent)
+
+        // Stop auto-SOS monitoring after triggering (don't spam)
+        stopAutoSosMonitoring()
     }
 }

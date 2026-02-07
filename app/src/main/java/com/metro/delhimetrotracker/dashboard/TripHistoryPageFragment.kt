@@ -53,29 +53,25 @@ class TripHistoryPageFragment : Fragment(), TripHistoryAdapter.OnTripDoubleTapLi
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
                 if (state is DashboardUiState.Success) {
-                    // Fetch line colors for each trip
-                    val tripsWithColors = state.recentTrips.map { trip ->
-                        val db = (requireActivity().application as MetroTrackerApplication).database
-                        val lineColors = withContext(Dispatchers.IO) {
-                            val fullTrip = db.tripDao().getTripById(trip.tripId)
-                            fullTrip?.visitedStations?.mapNotNull { stationId ->
-                                db.metroStationDao().getStationById(stationId)?.lineColor
-                            }?.distinct() ?: emptyList()
-                        }
-                        trip.copy(lineColors = lineColors)
-                    }
 
-                    adapter.submitList(tripsWithColors)
+                    val trips = state.recentTrips   // 👈 single source of truth
+                    android.util.Log.d(
+                        "UI_VERIFY",
+                        "Trips=${trips.size}, firstStations=${trips.firstOrNull()?.stationCount}"
+                    )
+
+                    adapter.submitList(trips)
 
                     val emptyView = view.findViewById<View>(R.id.tvEmptyState)
                     val rv = view.findViewById<View>(R.id.rvTripHistory)
 
-                    val isEmpty = tripsWithColors.isEmpty()
+                    val isEmpty = trips.isEmpty()
                     emptyView?.visibility = if (isEmpty) View.VISIBLE else View.GONE
                     rv?.visibility = if (isEmpty) View.GONE else View.VISIBLE
                 }
             }
         }
+
     }
 
     private fun setupSwipeToDelete(recyclerView: RecyclerView) {

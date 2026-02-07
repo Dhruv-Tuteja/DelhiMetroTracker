@@ -220,13 +220,13 @@
                             android:textColor="#FFFFFF"
                             android:layout_marginBottom="12dp"/>
 
-                        <Spinner
-                            android:id="@+id/spinnerReminder"
-                            android:layout_width="match_parent"
-                            android:layout_height="48dp"
-                            android:entries="@array/reminder_options"
-                            android:backgroundTint="#FFFFFF"
-                            android:layout_marginBottom="12dp"/>
+<!--                        <Spinner-->
+<!--                            android:id="@+id/spinnerReminder"-->
+<!--                            android:layout_width="match_parent"-->
+<!--                            android:layout_height="48dp"-->
+<!--                            android:entries="@array/reminder_options"-->
+<!--                            android:backgroundTint="#FFFFFF"-->
+<!--                            android:layout_marginBottom="12dp"/>-->
 
                         <RadioGroup
                             android:id="@+id/radioGroupFrequency"
@@ -271,66 +271,6 @@
                                 <View android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
                             </LinearLayout>
                         </LinearLayout>
-                    </LinearLayout>
-
-                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#424242" android:layout_marginVertical="12dp"/>
-
-                    <com.google.android.material.checkbox.MaterialCheckBox
-                        android:id="@+id/cbEnableSms"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Enable SMS Alerts"
-                        android:textColor="#FFFFFF"
-                        android:textSize="13sp"
-                        android:checked="true"
-                        android:minHeight="36dp"
-                        android:layout_marginBottom="8dp"
-                        app:buttonTint="#FFA726"/>
-
-                    <LinearLayout
-                        android:id="@+id/layoutPhoneInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:hint="Contact Number"
-                            app:boxBackgroundColor="#1E1E1E"
-                            app:boxStrokeColor="#FFA726"
-                            app:hintTextColor="#FFA726"
-                            app:startIconDrawable="@android:drawable/ic_menu_call"
-                            app:startIconTint="#FFA726">
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etPhoneNumber"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:inputType="phone"
-                                android:textSize="14sp"
-                                android:textColor="#FFFFFF"
-                                android:maxLength="10"/>
-                        </com.google.android.material.textfield.TextInputLayout>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnPickContact"
-                            style="@style/Widget.MaterialComponents.Button.Icon"
-                            android:layout_width="44dp"
-                            android:layout_height="44dp"
-                            android:layout_marginStart="8dp"
-                            android:padding="0dp"
-                            app:icon="@android:drawable/ic_menu_search"
-                            app:iconTint="#FFA726"
-                            app:iconSize="20dp"
-                            app:iconGravity="textStart"
-                            android:insetLeft="0dp"
-                            android:insetTop="0dp"
-                            android:insetRight="0dp"
-                            android:insetBottom="0dp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

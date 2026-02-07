@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/radioGroupAutoDelete"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <RadioButton
+        android:id="@+id/radioNever"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Never delete"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:checked="true"
+        android:buttonTint="?attr/colorPrimary"/>
+
+    <RadioButton
+        android:id="@+id/radio30Days"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="After 30 days"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:buttonTint="?attr/colorPrimary"/>
+
+    <RadioButton
+        android:id="@+id/radio60Days"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="After 60 days"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:buttonTint="?attr/colorPrimary"/>
+
+    <RadioButton
+        android:id="@+id/radio90Days"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="After 90 days"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:buttonTint="?attr/colorPrimary"/>
+</RadioGroup>

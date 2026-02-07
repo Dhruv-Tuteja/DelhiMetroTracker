@@ -6,6 +6,8 @@ import androidx.room.TypeConverters
 import androidx.room.ColumnInfo
 import com.metro.delhimetrotracker.data.local.database.converters.Converters // Updated
 import java.util.Date
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 
 @Entity(tableName = "trips")
 @TypeConverters(Converters::class) // Use unified class
@@ -59,7 +61,9 @@ data class Trip(
     val deviceId: String,              // To identify which phone uploaded this
     val lastModified: Long = System.currentTimeMillis(), // For conflict resolution
     val isDeleted: Boolean = false,    // "Tombstoning" for cloud deletions
-    val schemaVersion: Int = 1         // To handle future app updates
+    val schemaVersion: Int = 1 ,        // To handle future app updates
+
+    val routeDivergences: List<RouteDivergence>? = null // New field
 )
 
 enum class TripStatus {
@@ -100,7 +104,10 @@ data class StationCheckpoint(
     val accuracy: Float? = null,
 
     // Timestamp when this checkpoint was reached
-    val timestamp: Long? = null
+    val timestamp: Long? = null,
+
+    val isInferred: Boolean = false, // NEW: marks stations filled during GPS gaps
+    val inferredReason: String? = null // "GPS_GAP", "LINE_DIVERGENCE"
 )
 
 enum class DetectionMethod {
@@ -118,6 +125,7 @@ enum class DetectionMethod {
  */
 @Entity(tableName = "metro_stations")
 @TypeConverters(Converters::class)
+@Parcelize
 data class MetroStation(
     @PrimaryKey
     val stationId: String,
@@ -131,7 +139,7 @@ data class MetroStation(
     val isInterchange: Boolean = false,
     val interchangeLines: List<String>? = null, // Uses the new List converter
     val gtfs_stop_id: String? = null
-)
+) : Parcelable
 
 /**
  * Entity for user settings and preferences
@@ -238,3 +246,14 @@ data class CheckpointData(
     val accuracy: Float? = null,
     val timestamp: Long? = null
 )
+
+@Parcelize
+data class RouteDivergence(
+    val timestamp: Long,
+    val lastKnownStationId: String,
+    val lastKnownStationName: String,
+    val detectedStationId: String,
+    val detectedStationName: String,
+    val gapStations: List<String>, // Station IDs that were inferred
+    val reason: String // "GPS_OFFLINE", "LINE_CHANGE", "MANUAL_OVERRIDE"
+) : Parcelable

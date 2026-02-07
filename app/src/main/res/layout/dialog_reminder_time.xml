@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RadioGroup xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/radioGroupReminder"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <RadioButton
+        android:id="@+id/radio10Min"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="10 minutes before"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:buttonTint="?attr/colorPrimary"/>
+
+    <RadioButton
+        android:id="@+id/radio20Min"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="20 minutes before"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:buttonTint="?attr/colorPrimary"/>
+
+    <RadioButton
+        android:id="@+id/radio30Min"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="30 minutes before"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:checked="true"
+        android:buttonTint="?attr/colorPrimary"/>
+
+    <RadioButton
+        android:id="@+id/radio1Hour"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="1 hour before"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:buttonTint="?attr/colorPrimary"/>
+</RadioGroup>

@@ -526,6 +526,13 @@ class TrackingActivity : AppCompatActivity() {
     }
 
     private fun startSosCountdown() {
+        val sosEnabled = getSharedPreferences("settings", MODE_PRIVATE)
+            .getBoolean("sos_enabled", false)
+
+        if (!sosEnabled) {
+            Toast.makeText(this, "SOS is disabled in Settings", Toast.LENGTH_SHORT).show()
+            return
+        }
         val overlay = findViewById<FrameLayout>(R.id.sosOverlay)
         val tvCountdown = findViewById<TextView>(R.id.tvSosCountdown)
         overlay.visibility = View.VISIBLE

@@ -1,7 +1,6 @@
 package com.metro.delhimetrotracker.data.repository
 
 import android.util.Log
-// IMPORT YOUR GENERATED FILES
 import com.google.transit.realtime.FeedMessage
 import com.google.transit.realtime.VehiclePosition
 import kotlinx.coroutines.Dispatchers

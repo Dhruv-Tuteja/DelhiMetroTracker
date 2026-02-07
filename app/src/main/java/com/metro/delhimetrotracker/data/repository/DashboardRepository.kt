@@ -3,7 +3,7 @@ package com.metro.delhimetrotracker.data.repository
 import com.metro.delhimetrotracker.data.local.database.AppDatabase
 import com.metro.delhimetrotracker.data.local.database.entities.MetroStation
 import com.metro.delhimetrotracker.data.local.database.entities.Trip
-import com.metro.delhimetrotracker.data.local.database.entities.TripStatus
+import android.util.Log
 import com.metro.delhimetrotracker.data.model.DashboardStats
 import com.metro.delhimetrotracker.data.model.FrequentRoute
 import com.metro.delhimetrotracker.data.model.TripCardData
@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOf
 import java.util.Calendar
 import com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint
+import kotlinx.coroutines.flow.flatMapLatest
 
 class DashboardRepository(private val database: AppDatabase) {
 
@@ -45,7 +47,7 @@ class DashboardRepository(private val database: AppDatabase) {
             tripDao.getCompletedTripsCount(),
             tripDao.getTotalTravelTime(),
             getUniqueStationsFlow(),
-            tripDao.getTripsByStatus(TripStatus.COMPLETED) // Get all completed trips
+            tripDao.getCompletedTripsSafe()
         ) { tripCount, totalMinutes, uniqueStations, completedTrips ->
 
             // Calculate total stations from all trips
@@ -72,7 +74,7 @@ class DashboardRepository(private val database: AppDatabase) {
      * Get unique stations visited
      */
     private fun getUniqueStationsFlow(): Flow<Int> {
-        return tripDao.getTripsByStatus(TripStatus.COMPLETED).map { completedTrips ->
+        return tripDao.getCompletedTripsSafe().map { completedTrips ->
             completedTrips.flatMap { it.visitedStations }.distinct().size
         }
     }
@@ -85,15 +87,11 @@ class DashboardRepository(private val database: AppDatabase) {
         val co2SavingsPerKm = 32.38 / 1000.0 // Specific to transit vs car offset
         return totalKm * co2SavingsPerKm
     }
-    suspend fun deleteTripById(id: Long) {
-        database.tripDao().deleteById(id)
-    }
-
     /**
      * Get frequent routes with time patterns
      */
     suspend fun getFrequentRoutes(): List<FrequentRoute> {
-        val completedTrips = tripDao.getTripsByStatus(TripStatus.COMPLETED).first()
+        val completedTrips = tripDao.getCompletedTripsSafe().first()
 
         val routeGroups = completedTrips.groupBy {
             "${it.sourceStationId}_${it.destinationStationId}"
@@ -127,20 +125,28 @@ class DashboardRepository(private val database: AppDatabase) {
     /**
      * Convert Trip entities to enriched TripCardData
      */
-    suspend fun getEnrichedTripHistory(): Flow<List<TripCardData>> {
-        return combine(
-            tripDao.getRecentTrips(50),
-            stationDao.getAllStationsFlow()
-        ) { trips, allStations ->
-            // 2. Fetch checkpoints for each trip inside the map
-            trips.mapNotNull { trip ->
-                // This fetches the actual checkpoints from Room
-                val checkpoints = stationCheckpointDao.getCheckpointsForTrip(trip.id)
+    fun getEnrichedTripHistory(): Flow<List<TripCardData>> {
+        return tripDao.getRecentTrips(50).flatMapLatest { trips ->
+            if (trips.isEmpty()) {
+                flowOf(emptyList())
+            } else {
+                combine(
+                    trips.map { trip ->
+                        stationCheckpointDao.getCheckpointsForTripFlow(trip.id)
+                            .map { checkpoints -> trip to checkpoints }
+                    }
+                ) { tripCheckpointPairs ->
 
-                enrichTripData(trip, allStations, checkpoints)
+                    val allStations = database.metroStationDao().getAllStations()
+
+                    tripCheckpointPairs.mapNotNull { (trip, checkpoints) ->
+                        enrichTripData(trip, allStations, checkpoints)
+                    }
+                }
             }
         }
     }
+
 
     /**
      * Enrich a single trip with station metadata and checkpoints
@@ -153,10 +159,22 @@ class DashboardRepository(private val database: AppDatabase) {
 
         if (trip.endTime == null || trip.durationMinutes == null) return null
 
-        val stationMap = allStations.associateBy { it.stationId }
-        val visitedStations = trip.visitedStations.mapNotNull { stationMap[it] }
+        // ✅ CHANGED: Match by station NAME instead of UUID
+        val stationMapByName = allStations.associateBy { it.stationName }
 
-        val lineColors = visitedStations.map { it.lineColor }.distinct()
+        val visitedStations = checkpoints
+            .sortedBy { it.stationOrder }
+            .mapNotNull { checkpoint ->
+                stationMapByName[checkpoint.stationName]
+            }
+
+        // ✅ CHANGED: Use only SOURCE and DESTINATION line colors (like Scheduled Trips)
+        val sourceStation = stationMapByName[trip.sourceStationName]
+        val destStation = stationMapByName[trip.destinationStationName]
+
+        val lineColors = mutableSetOf<String>()
+        sourceStation?.let { lineColors.add(it.lineColor) }
+        destStation?.let { lineColors.add(it.lineColor) }
 
         val interchangeStations = visitedStations
             .filter { it.isInterchange }
@@ -165,6 +183,12 @@ class DashboardRepository(private val database: AppDatabase) {
 
         val expectedDuration = visitedStations.size * 2
         val delayMinutes = trip.durationMinutes - expectedDuration
+
+        Log.d(
+            "DASHBOARD_VERIFY",
+            "trip=${trip.id}, checkpoints=${checkpoints.size}, visitedStations=${trip.visitedStations.size}"
+        )
+
 
         return TripCardData(
             tripId = trip.id,
@@ -175,7 +199,7 @@ class DashboardRepository(private val database: AppDatabase) {
             durationMinutes = trip.durationMinutes,
             stationCount = visitedStations.size,
             interchangeStations = interchangeStations,
-            lineColors = lineColors,
+            lineColors = lineColors.toList(),
             expectedDurationMinutes = expectedDuration,
             delayMinutes = delayMinutes,
             hadSosAlert = trip.hadSosAlert,

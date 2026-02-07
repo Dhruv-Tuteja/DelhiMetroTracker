@@ -33,13 +33,6 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
     override fun onBindViewHolder(holder: TripViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
-    interface TripItemListener {
-        fun onTripDoubleTap(source: String, destination: String)
-        fun onTripShare(trip: TripCardData) // New method for sharing
-    }
-
-
-
     inner class TripViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val tvSource: TextView = itemView.findViewById(R.id.tvSource)
         private val tvDuration: TextView = itemView.findViewById(R.id.tvDuration)
@@ -107,10 +100,6 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
                     doubleTapListener.onTripLongPress(trip)
                 }
             })
-//            itemView.setOnLongClickListener {
-//                doubleTapListener.onTripShare(trip)
-//                true // This tells Android we "consumed" the click
-//            }
             itemView.setOnTouchListener { _, event ->
                 gestureDetector.onTouchEvent(event)
                 false
@@ -129,7 +118,7 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
             } else {
                 val gradientColors = colors.map { parseColor(it) }.toIntArray()
                 val gradient = GradientDrawable(
-                    GradientDrawable.Orientation.LEFT_RIGHT,
+                    GradientDrawable.Orientation.TOP_BOTTOM,
                     gradientColors
                 )
                 gradient.cornerRadius = 8f

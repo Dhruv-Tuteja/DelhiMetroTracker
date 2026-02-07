@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Existing strings -->
     <string name="app_name">Delhi Metro Tracker</string>
     <string name="journey_start">Start Journey</string>
     <string name="journey_stop">Stop Journey</string>
@@ -9,6 +10,7 @@
     <string name="permission_required">Permission Required</string>
     <string name="location_permission_rationale">Location permission is needed to track your metro journey</string>
     <string name="sms_permission_rationale">SMS permission is needed to send alerts to your emergency contact</string>
+
     <!-- Station Selector Dialog -->
     <string name="journey_plan_icon">Journey planning map icon</string>
     <string name="plan_your_journey">Plan Your Journey</string>
@@ -28,8 +30,6 @@
     <string name="phone_icon">Phone icon</string>
     <string name="pick_contact">Pick</string>
     <string name="select_contact_button">Select contact from phonebook</string>
-
-
     <string name="manual_update_icon">Manual station update icon</string>
     <string name="manual_station_update">Manual Station Update</string>
     <string name="which_station_reached">🚉 Which station did you reach?</string>
@@ -40,6 +40,62 @@
     <string name="manual_update_info">This will update your journey progress and notify your emergency contact.</string>
     <string name="cancel">Cancel</string>
     <string name="start_journey">Start Journey</string>
+
+    <!-- Settings strings -->
+    <string name="settings">Settings</string>
+    <string name="appearance">Appearance</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="dark_mode_desc">Switch between light and dark theme</string>
+    <string name="emergency_contact_section">Emergency Contact</string>
+    <string name="emergency_contact_desc">Set your emergency contact for SMS and SOS alerts</string>
+    <string name="not_set">Not set</string>
+    <string name="sms_sos_settings">SMS &amp; SOS Settings</string>
+    <string name="enable_sms">Enable SMS Alerts</string>
+    <string name="enable_sms_desc">Send journey updates via SMS</string>
+    <string name="enable_sos">Enable SOS</string>
+    <string name="enable_sos_desc">Emergency alerts via call and SMS</string>
+    <string name="auto_trigger_sos">Auto-trigger SOS</string>
+    <string name="auto_trigger_sos_desc">Trigger if no new station in 15 minutes</string>
+    <string name="scheduled_trips">Scheduled Trips</string>
+    <string name="default_reminder_time">Default Reminder Time</string>
+    <string name="metro_information">Metro Information</string>
+    <string name="delhi_metro_map">Delhi Metro Map</string>
+    <string name="view_metro_network">View complete metro network</string>
+    <string name="sync_data">Sync &amp; Data</string>
+    <string name="auto_sync">Auto Sync</string>
+    <string name="auto_sync_desc">Automatically sync with cloud</string>
+    <string name="wifi_only_sync">WiFi Only Sync</string>
+    <string name="wifi_only_sync_desc">Save mobile data</string>
+    <string name="auto_delete_old_trips">Auto-Delete Old Trips</string>
+    <string name="export_trip_history">Export Trip History</string>
+    <string name="export_trip_history_desc">Download as CSV or JSON</string>
+    <string name="clear_all_data">Clear All Data</string>
+    <string name="clear_all_data_desc">Delete all trips and scheduled trips</string>
+    <string name="never">Never</string>
+    <string name="after_30_days">After 30 days</string>
+    <string name="after_60_days">After 60 days</string>
+    <string name="after_90_days">After 90 days</string>
+
+    <!-- Dialog strings -->
+    <string name="emergency_contact_dialog_title">Emergency Contact</string>
+    <string name="contact_name_hint">Contact Name (Optional)</string>
+    <string name="phone_number_hint">Phone Number</string>
+    <string name="emergency_contact_info">This contact will receive SMS alerts and emergency calls</string>
+    <string name="save">Save</string>
+    <string name="default_reminder_title">Default Reminder Time</string>
+    <string name="auto_delete_title">Auto-Delete Old Trips</string>
+    <string name="export_title">Export Trip History</string>
+    <string name="clear_data_title">Clear All Data</string>
+    <string name="clear_data_message">This will permanently delete all your trip history and scheduled trips. This action cannot be undone.\n\nAre you sure?</string>
+    <string name="delete_all">Delete All</string>
+    <string name="set_emergency_contact_first">Please set emergency contact first</string>
+    <string name="invalid_phone_number">Please enter valid 10-digit number</string>
+    <string name="emergency_contact_saved">Emergency contact saved</string>
+    <string name="all_data_cleared">All data cleared</string>
+    <string name="deleted_old_trips">Deleted %d old trips</string>
+    <string name="export_failed">Export failed</string>
+    <string name="export_error">Export error: %s</string>
+    <string name="no_browser_available">No browser available</string>
 
     <string-array name="reminder_options">
         <item>10 min before</item>

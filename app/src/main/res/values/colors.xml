@@ -15,52 +15,81 @@
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
 
-
-    <!-- Main App Background (Dark Theme) -->
-    <color name="background_primary">#0A0E27</color>
-    <color name="background_card">#1A1F3A</color>
-    <color name="background_surface">#0A0E27</color>
-    <color name="card_bg">#1A1F3A</color>
-    <color name="current_station_bg">#1A2645</color>
-
     <!-- Accent Colors -->
     <color name="accent_blue">#64B5F6</color>
     <color name="accent_red">#FF5252</color>
     <color name="accent_color">#64B5F6</color>
-
-    <!-- Text Colors (Dark Theme) -->
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#8A94B8</color>
-    <color name="text_tertiary">#6B7BA8</color>
-
-    <!-- Dashboard Text Colors (Light Theme) -->
-    <color name="primary_text">#212121</color>
-    <color name="secondary_text">#757575</color>
-    <color name="tertiary_text">#BDBDBD</color>
-
-    <!-- Line Colors -->
-    <color name="line_unvisited">#2A3555</color>
-    <color name="line_visited">#64B5F6</color>
-
-    <!-- Card & UI Elements -->
-    <color name="card_stroke">#2A3555</color>
-    <color name="divider_color">#2A3555</color>
-    <color name="progress_track">#2A3555</color>
-
-    <!-- Node Colors -->
-    <color name="node_visited">#64B5F6</color>
-    <color name="node_unvisited">#2A3555</color>
-    <color name="node_stroke">#4A5575</color>
 
     <!-- Status Colors -->
     <color name="success_color">#4CAF50</color>
     <color name="delay_warning">#FF9800</color>
     <color name="interchange_color">#9C27B0</color>
 
+    <!-- Line Colors -->
+    <color name="line_unvisited">#2A3555</color>
+    <color name="line_visited">#64B5F6</color>
+
+    <!-- Node Colors -->
+    <color name="node_visited">#64B5F6</color>
+    <color name="node_unvisited">#2A3555</color>
+    <color name="node_stroke">#4A5575</color>
+
     <!-- Effects -->
     <color name="glow_blue">#2264B5F6</color>
 
-    <!-- Dashboard Background (if needed for light sections) -->
+    <!-- Dark Theme Colors -->
+    <color name="background_primary_dark">#0A0E27</color>
+    <color name="background_card_dark">#1A1F3A</color>
+    <color name="background_surface_dark">#0A0E27</color>
+    <color name="card_bg_dark">#1A1F3A</color>
+    <color name="current_station_bg_dark">#1A2645</color>
+
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_secondary_dark">#8A94B8</color>
+    <color name="text_tertiary_dark">#6B7BA8</color>
+
+    <color name="card_stroke_dark">#2A3555</color>
+    <color name="divider_color_dark">#2A3555</color>
+    <color name="progress_track_dark">#2A3555</color>
+
+    <!-- Light Theme Colors -->
+    <color name="background_primary_light">#F5F5F5</color>
+    <color name="background_card_light">#FFFFFF</color>
+    <color name="background_surface_light">#FAFAFA</color>
+    <color name="card_bg_light">#FFFFFF</color>
+    <color name="current_station_bg_light">#E3F2FD</color>
+
+    <color name="text_primary_light">#212121</color>
+    <color name="text_secondary_light">#757575</color>
+    <color name="text_tertiary_light">#BDBDBD</color>
+
+    <color name="card_stroke_light">#E0E0E0</color>
+    <color name="divider_color_light">#E0E0E0</color>
+    <color name="progress_track_light">#E0E0E0</color>
+
+    <!-- Legacy colors kept for compatibility -->
+    <color name="background_primary">#0A0E27</color>
+    <color name="background_card">#1A1F3A</color>
+    <color name="background_surface">#0A0E27</color>
+    <color name="card_bg">#1A1F3A</color>
+    <color name="current_station_bg">#1A2645</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#8A94B8</color>
+    <color name="text_tertiary">#6B7BA8</color>
+    <color name="primary_text">#212121</color>
+    <color name="secondary_text">#757575</color>
+    <color name="tertiary_text">#BDBDBD</color>
+    <color name="card_stroke">#2A3555</color>
+    <color name="divider_color">#2A3555</color>
+    <color name="progress_track">#2A3555</color>
     <color name="background_color">#F5F5F5</color>
     <color name="accent_light">#E3F2FD</color>
+
+    <!-- Switch SOS colors -->
+    <color name="switch_thumb_on">#FF5252</color>   <!-- accent_red -->
+    <color name="switch_thumb_off">#B0BEC5</color>
+
+    <color name="switch_track_on">#55FF5252</color> <!-- red with opacity -->
+    <color name="switch_track_off">#37474F</color>
+
 </resources>

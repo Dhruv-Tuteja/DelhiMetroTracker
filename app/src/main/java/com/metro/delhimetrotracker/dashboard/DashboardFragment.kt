@@ -7,11 +7,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.util.Log
 import android.widget.TextView
 import java.text.SimpleDateFormat
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
-import androidx.core.content.ContextCompat
+import android.content.Context
 import com.metro.delhimetrotracker.MetroTrackerApplication
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -33,10 +34,11 @@ import android.widget.ImageView
 import java.util.Date
 import com.metro.delhimetrotracker.ui.MainActivity
 import com.metro.delhimetrotracker.data.model.TripCardData
-import com.metro.delhimetrotracker.data.model.DashboardStats
-import com.metro.delhimetrotracker.data.model.FrequentRoute
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.button.MaterialButton
+
 
 class DashboardFragment : Fragment() {
 
@@ -86,8 +88,32 @@ class DashboardFragment : Fragment() {
 
         // 4. Observe Data
         observeViewModel()
+
+        // Optional auto-sync when dashboard opens
+        if (shouldAutoSync(requireContext())) {
+            (activity as? MainActivity)?.performManualSync()
+        }
+
     }
 
+    fun shouldAutoSync(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+        // 1️⃣ Check Auto Sync toggle
+        val autoSync = prefs.getBoolean("auto_sync", true)
+        if (!autoSync) return false
+
+        // 2️⃣ Check Wi-Fi only toggle
+        val wifiOnly = prefs.getBoolean("wifi_only_sync", false)
+        if (!wifiOnly) return true   // Wi-Fi not required → allow sync
+
+        // 3️⃣ Wi-Fi required → check network
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    }
     private fun initializeViews(view: View) {
         viewPager = view.findViewById(R.id.viewPager)
         tvTabHistory = view.findViewById(R.id.tvTabHistory)
@@ -153,10 +179,6 @@ class DashboardFragment : Fragment() {
     }
 
     private fun setupClickListeners(view: View) {
-        // The "Plan Journey" button logic
-//        view.findViewById<View>(R.id.btnPlanJourney).setOnClickListener {
-//            showStationSelectorDialog()
-//        }
 
         view.findViewById<ImageView>(R.id.btnCloseDashboard)?.setOnClickListener {
             parentFragmentManager.popBackStack()
@@ -244,89 +266,13 @@ class DashboardFragment : Fragment() {
         }
     }
 
-    private fun showStationSelectorDialog() {
-        // 1. Get Station Names using the ViewModel function we fixed
-        viewModel.getAllStationNames { stations ->
-            if (stations.isEmpty()) {
-                Toast.makeText(context, "No stations found in database", Toast.LENGTH_SHORT).show()
-                return@getAllStationNames
-            }
-            showJourneyDialog(stations)
-        }
-    }
-
-    private fun showJourneyDialog(stationNames: List<String>) {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_station_selector, null)
-        val actvSource = dialogView.findViewById<AutoCompleteTextView>(R.id.sourceAutoComplete)
-        val actvDest = dialogView.findViewById<AutoCompleteTextView>(R.id.destinationAutoComplete)
-
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, stationNames)
-        actvSource.setAdapter(adapter)
-        actvDest.setAdapter(adapter)
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Plan a Journey")
-            .setView(dialogView)
-            .setPositiveButton("Start") { _, _ ->
-                val source = actvSource.text.toString()
-                val dest = actvDest.text.toString()
-
-                if (source.isNotEmpty() && dest.isNotEmpty()) {
-                    Toast.makeText(context, "Starting: $source -> $dest", Toast.LENGTH_SHORT).show()
-                    // Add your Intent to NavigationActivity here when ready
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
     private fun formatMinutesToHours(minutes: Int): String {
         val hrs = minutes / 60
         val mins = minutes % 60
         return if (hrs > 0) "${hrs}h ${mins}m" else "${mins}m"
     }
-
-    // Add this to DashboardFragment.kt
-    fun openPlanJourneyWithStations(source: String, destination: String) {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_station_selector, null)
-        val actvSource = dialogView.findViewById<AutoCompleteTextView>(R.id.sourceAutoComplete)
-        val actvDest = dialogView.findViewById<AutoCompleteTextView>(R.id.destinationAutoComplete)
-
-        // Pre-fill the text fields
-        actvSource.setText(source)
-        actvDest.setText(destination)
-
-        // Set the adapter (you'll need to fetch station names like you do in showPlanJourneyDialog)
-        viewModel.getAllStationNames { stationNames ->
-            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, stationNames)
-            actvSource.setAdapter(adapter)
-            actvDest.setAdapter(adapter)
-        }
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Plan Scheduled Journey")
-            .setView(dialogView)
-            .setPositiveButton("Start") { _, _ ->
-                // Navigation logic here
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-    // Add these inside the DashboardFragment class
     fun onTripDoubleTap(source: String, destination: String) {
         (activity as? MainActivity)?.showStationSelectionDialog(source, destination)
-    }
-
-    fun onTripShare(trip: TripCardData) {
-        val source = trip.sourceStationName
-        val dest = trip.destinationStationName
-        val shareText = "I traveled from ${trip.sourceStationName} to ${trip.destinationStationName} " +
-                "using the Delhi Metro Tracker! 🚇"
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, shareText)
-        }
-        startActivity(Intent.createChooser(intent, "Share Trip"))
     }
     fun onTripLongPress(trip: TripCardData) {
         showTripDetailsDialog(trip)
@@ -361,10 +307,18 @@ class DashboardFragment : Fragment() {
             val fullTrip = db.tripDao().getTripById(trip.tripId)
 
             if (fullTrip != null) {
-                val stationIds = fullTrip.visitedStations
-                val stations = stationIds.mapNotNull { stationId ->
-                    db.metroStationDao().getStationById(stationId)
+                val checkpoints = db.stationCheckpointDao()
+                    .getCheckpointsForTrip(trip.tripId)
+                    .sortedBy { it.stationOrder }
+
+                // ✅ FIX: Get all stations first, then match by NAME instead of UUID
+                val allStations = db.metroStationDao().getAllStations()
+                val stationMap = allStations.associateBy { it.stationName }
+
+                val stations = checkpoints.mapNotNull { checkpoint ->
+                    stationMap[checkpoint.stationName]
                 }
+
 
                 val timePerStation = if (stations.size > 1) {
                     (trip.durationMinutes * 60000L) / (stations.size - 1)
@@ -404,9 +358,16 @@ class DashboardFragment : Fragment() {
                 val dateStr = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(trip.startTime)
                 val timeStr = SimpleDateFormat("hh:mm a", Locale.getDefault()).format(trip.startTime)
 
-                val stationIds = fullTrip.visitedStations
-                val stations = stationIds.mapNotNull { stationId ->
-                    db.metroStationDao().getStationById(stationId)
+                // ✅ FIX: Use checkpoints instead of visitedStations
+                val checkpoints = db.stationCheckpointDao()
+                    .getCheckpointsForTrip(trip.tripId)
+                    .sortedBy { it.stationOrder }
+
+                val allStations = db.metroStationDao().getAllStations()
+                val stationMap = allStations.associateBy { it.stationName }
+
+                val stations = checkpoints.mapNotNull { checkpoint ->
+                    stationMap[checkpoint.stationName]
                 }
 
                 val timePerStation = if (stations.size > 1) {

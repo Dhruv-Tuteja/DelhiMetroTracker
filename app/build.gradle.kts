@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     id("com.google.gms.google-services")
-    // REMOVED: id("com.squareup.wire") -> We are using Manual Mode below
+    id("kotlin-parcelize")
 }
 
 // 1. Create a configuration to download the compiler tool manually
@@ -29,6 +29,9 @@ android {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+    }
+    buildFeatures {
+        viewBinding = true
     }
 
     compileOptions {
@@ -109,6 +112,11 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.1")
     testImplementation("androidx.room:room-testing:$roomVersion")
+
+
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
+    // Play Services Location
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 }
 
 // 5. THE MANUAL GENERATION TASK

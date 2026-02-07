@@ -1,68 +1,75 @@
 package com.metro.delhimetrotracker.ui
 
 import android.Manifest
-import android.content.Context
+import android.annotation.SuppressLint
+import android.app.Dialog
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
-import com.google.android.material.card.MaterialCardView
 import android.os.Build
-import kotlinx.coroutines.tasks.await
-import android.widget.Button
 import android.os.Bundle
-import android.util.Log
 import android.os.PowerManager
 import android.provider.ContactsContract
+import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
-import android.widget.*
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
+import android.widget.Button
+import android.widget.CheckBox
+import android.widget.LinearLayout
+import android.widget.RadioGroup
+import android.widget.Spinner
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
+import androidx.core.net.toUri
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
+import com.google.android.gms.common.api.ApiException
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 import com.metro.delhimetrotracker.MetroTrackerApplication
 import com.metro.delhimetrotracker.R
+import com.metro.delhimetrotracker.data.local.database.entities.ScheduledTrip
 import com.metro.delhimetrotracker.data.local.database.entities.Trip
 import com.metro.delhimetrotracker.data.local.database.entities.TripStatus
 import com.metro.delhimetrotracker.data.repository.DatabaseInitializer
+import com.metro.delhimetrotracker.data.repository.GtfsLoader
+import com.metro.delhimetrotracker.data.repository.MetroRepository
+import com.metro.delhimetrotracker.data.repository.RoutePlanner
+import com.metro.delhimetrotracker.receivers.ScheduledTripAlarmManager
 import com.metro.delhimetrotracker.service.JourneyTrackingService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.Date
-import com.google.android.material.button.MaterialButton
-import android.app.Dialog
-import com.google.android.material.appbar.MaterialToolbar
-import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
-import android.view.ViewGroup
-import android.widget.RadioGroup
-import com.metro.delhimetrotracker.data.repository.RoutePlanner
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.android.gms.common.api.ApiException
-import com.google.firebase.firestore.FirebaseFirestore
-import android.net.Uri
-import com.metro.delhimetrotracker.data.repository.GtfsLoader
-import com.google.android.material.bottomsheet.BottomSheetDialog
-import android.widget.CheckBox
-import com.metro.delhimetrotracker.data.local.database.entities.ScheduledTrip
-import com.metro.delhimetrotracker.data.repository.MetroRepository
-import com.metro.delhimetrotracker.receivers.ScheduledTripAlarmManager
-import java.util.Calendar
-import kotlin.collections.find
-import android.app.TimePickerDialog
-import android.widget.ArrayAdapter
-import android.widget.Spinner
-import android.widget.TextView
-import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.flow.firstOrNull
-import kotlin.collections.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.util.Calendar
+import java.util.Date
+import androidx.appcompat.app.AppCompatDelegate
+import android.view.Menu
+import android.view.MenuItem
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 
 class MainActivity : AppCompatActivity() {
 
@@ -96,58 +103,6 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
-
-    private val contactPickerLauncher = registerForActivityResult(ActivityResultContracts.PickContact()) { uri ->
-        uri?.let { contactUri ->
-            val cursor = contentResolver.query(contactUri, null, null, null, null)
-            if (cursor?.moveToFirst() == true) {
-                val id = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.Contacts._ID))
-                val hasPhone = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.Contacts.HAS_PHONE_NUMBER))
-                if (hasPhone == "1") {
-                    val phones = contentResolver.query(
-                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null,
-                        ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = " + id, null, null
-                    )
-                    phones?.moveToFirst()
-                    val rawNumber = phones?.getString(phones.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER))
-
-                    // ✅ Smart extraction: Handle +91 and regular numbers
-                    val cleanedNumber = extractIndianMobileNumber(rawNumber)
-                    currentDialogPhoneField?.setText(cleanedNumber)
-
-                    phones?.close()
-                }
-            }
-            cursor?.close()
-        }
-    }
-
-    private fun extractIndianMobileNumber(rawNumber: String?): String {
-        if (rawNumber.isNullOrEmpty()) return ""
-
-        // Step 1: Remove all non-digits except +
-        val cleaned = rawNumber.replace(Regex("[^0-9+]"), "")
-
-        // Step 2: Apply extraction logic
-        val result = when {
-            // +91XXXXXXXXXX -> XXXXXXXXXX
-            cleaned.startsWith("+91") -> cleaned.substring(3).take(10)
-
-            // 91XXXXXXXXXX -> XXXXXXXXXX (12 digits starting with 91)
-            cleaned.startsWith("91") && cleaned.length > 11 -> cleaned.substring(2).take(10)
-
-            // 0XXXXXXXXXX -> XXXXXXXXXX (11 digits starting with 0)
-            cleaned.startsWith("0") && cleaned.length == 11 -> cleaned.substring(1)
-
-            // XXXXXXXXXX -> XXXXXXXXXX (exactly 10 digits)
-            cleaned.length == 10 && !cleaned.startsWith("+") -> cleaned
-
-            // Fallback: Just remove + and take up to 10 digits
-            else -> cleaned.replace("+", "").take(10)
-        }
-        return result
-    }
-
     // ===== FIX 1: IMMEDIATE SYNC ON TRIP DELETE =====
     fun deleteTrip(tripId: Long) {
         lifecycleScope.launch(Dispatchers.IO) {
@@ -224,7 +179,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ===== FIX 3: IMPROVED MANUAL SYNC (CALLED ON SWIPE DOWN) =====
-    fun performManualSync(onComplete: () -> Unit) {
+    fun performManualSync(onComplete: () -> Unit={}) {
         val user = auth.currentUser
         if (user == null) {
             onComplete()
@@ -264,7 +219,13 @@ class MainActivity : AppCompatActivity() {
                             val cloudIsDeleted = document.getBoolean("isDeleted") ?: false
 
                             // 🛑 CRITICAL: Check local state first
-                            val localTrip = appDb.tripDao().getTripById(id)
+                            val localTrip = appDb.tripDao().getTripByIdIncludingDeleted(id)
+
+                            if (localTrip?.isDeleted == true) {
+                                Log.d("Sync", "Skipping cloud revive for deleted trip $id")
+                                continue
+                            }
+
 
                             // If local trip has PENDING changes, don't overwrite with cloud data
                             if (localTrip != null && localTrip.syncState == "PENDING") {
@@ -307,9 +268,18 @@ class MainActivity : AppCompatActivity() {
                                 syncState = "SYNCED",
                                 deviceId = document.getString("deviceId") ?: "cloud",
                                 lastModified = cloudLastModified,
-                                isDeleted = cloudIsDeleted, // ← Keep the deletion state from cloud
+                                isDeleted = if (localTrip != null && localTrip.isDeleted && localTrip.lastModified > cloudLastModified) {
+                                    true
+                                } else {
+                                    cloudIsDeleted
+                                },// ← Keep the deletion state from cloud
                                 schemaVersion = document.getLong("schemaVersion")?.toInt() ?: 1
                             )
+                            if (localTrip != null && localTrip.isDeleted) {
+                                // Local trip is deleted, keep it deleted regardless of cloud state
+                                Log.d("Sync", "Skipping Trip $id - Locally deleted")
+                                continue
+                            }
 
                             appDb.tripDao().insertTrip(trip)
 
@@ -436,15 +406,17 @@ class MainActivity : AppCompatActivity() {
 
         if (deviceId == null) {
             deviceId = java.util.UUID.randomUUID().toString()
-            sharedPrefs.edit().putString("device_id", deviceId).apply()
+            sharedPrefs.edit { putString("device_id", deviceId) }
         }
 
         return deviceId
     }
 
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
 
         setupGoogleSignIn()
         updateSignInButton()
@@ -471,6 +443,20 @@ class MainActivity : AppCompatActivity() {
             restoreScheduledTripsFromCloud()
         }
 
+        val isDarkMode = getSharedPreferences("settings", MODE_PRIVATE)
+            .getBoolean("dark_mode", false)
+
+        AppCompatDelegate.setDefaultNightMode(
+            if (isDarkMode)
+                AppCompatDelegate.MODE_NIGHT_YES
+            else
+                AppCompatDelegate.MODE_NIGHT_NO
+        )
+
+        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayShowTitleEnabled(false)
+
         // 3. Setup UI
         requestAllPermissions()
         checkBatteryOptimization()
@@ -486,7 +472,65 @@ class MainActivity : AppCompatActivity() {
             val dest = intent.getStringExtra("PREFILL_DEST")
             showStationSelectionDialog(src, dest)
         }
+        updateStartJourneyButton()
+
     }
+    private fun updateStartJourneyButton() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = (application as MetroTrackerApplication).database
+            val activeTrip = db.tripDao().getActiveTrip()
+
+            withContext(Dispatchers.Main) {
+                val btn = findViewById<MaterialButton>(R.id.btnStartJourney)
+
+                if (activeTrip != null) {
+                    // ACTIVE TRIP EXISTS
+                    btn.text = "Go to Active Trip"
+                    btn.setOnClickListener {
+                        val intent = Intent(this@MainActivity, TrackingActivity::class.java).apply {
+                            putExtra("EXTRA_TRIP_ID", activeTrip.id)
+                            putExtra("SOURCE_ID", activeTrip.sourceStationId)
+                            putExtra("DEST_ID", activeTrip.destinationStationId)
+                        }
+                        startActivity(intent)
+                    }
+                } else {
+                    // NO ACTIVE TRIP
+                    btn.text = "Start Your Journey"
+                    btn.setOnClickListener {
+                        showStationSelectionDialog(null, null)
+                    }
+                }
+            }
+        }
+    }
+    override fun onResume() {
+        super.onResume()
+        updateStartJourneyButton()
+    }
+
+
+    fun openStationSelector() {
+        showStationSelectionDialog()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                startActivity(
+                    Intent(this, SettingsActivity::class.java)
+                )
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -501,7 +545,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupGoogleSignIn() {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+        val gso = Builder(DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id)) // Firebase generates this automatically
             .requestEmail()
             .build()
@@ -514,13 +558,14 @@ class MainActivity : AppCompatActivity() {
             // TODO: Update UI based on currentUser != null
         }
     }
+    @SuppressLint("UnsafeIntentLaunch")
     private fun performSignOut() {
         lifecycleScope.launch(Dispatchers.IO) {
             // 1. Wipe Data (both trips AND scheduled trips)
             val db = (application as MetroTrackerApplication).database
             db.tripDao().deleteAllTrips()
             db.scheduledTripDao().deleteAll() // Delete scheduled trips too
-            getSharedPreferences("MetroPrefs", MODE_PRIVATE).edit().clear().apply()
+            getSharedPreferences("MetroPrefs", MODE_PRIVATE).edit { clear() }
 
             withContext(Dispatchers.Main) {
                 // 2. Sign Out Cloud
@@ -584,14 +629,25 @@ class MainActivity : AppCompatActivity() {
 
                     for (document in documents) {
                         try {
+                            val id = document.getLong("id") ?: 0L
                             // 1. CHECK FOR DELETION FLAG
                             val isDeleted = document.getBoolean("isDeleted") ?: false
 
                             // 🛑 STOP: If it's deleted in the cloud, DO NOT restore it locally.
-                            if (isDeleted) continue
-                            // Manually map Firestore fields back to Trip Entity
-                            // We do this manually to ensure Types (Long vs Int, Date vs Timestamp) match perfectly
-                            val id = document.getLong("id") ?: 0L
+                            if (isDeleted) {
+                                Log.d("Restore", "Skipping deleted trip $id")
+                                continue
+                            }
+
+                            // 2. Check if trip already exists locally
+                            val existingTrip = appDb.tripDao().getTripById(id)
+
+                            // 🛑 STOP: If trip exists locally and is deleted, don't overwrite
+                            if (existingTrip != null && existingTrip.isDeleted) {
+                                Log.d("Restore", "Skipping locally deleted trip $id")
+                                continue
+                            }
+
                             val trip = Trip(
                                 id = id,
                                 sourceStationId = document.getString("sourceStationId") ?: "",
@@ -622,7 +678,7 @@ class MainActivity : AppCompatActivity() {
                                 isDeleted = false,
                                 schemaVersion = document.getLong("schemaVersion")?.toInt() ?: 1
                             )
-
+                            Log.d("Restore", "didnt Skip trip $id")
                             appDb.tripDao().insertTrip(trip)
 
                             // ✅ NEW: Restore checkpoints
@@ -852,7 +908,7 @@ class MainActivity : AppCompatActivity() {
                     try {
                         // This intent opens a specific "Allow / Deny" dialog for YOUR app
                         val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                        intent.data = Uri.parse("package:$packageName")
+                        intent.data = "package:$packageName".toUri()
                         startActivity(intent)
                     } catch (e: Exception) {
                         // Fallback to the general settings list if the direct dialog fails
@@ -864,31 +920,10 @@ class MainActivity : AppCompatActivity() {
                 .show()
         }
     }
-
-    //    private fun setupRecyclerView() {
-//        val rv = findViewById<RecyclerView>(R.id.rvScheduledTrips)
-//
-//        scheduledTripAdapter = ScheduledTripAdapter(
-//            onStartClick = { trip ->
-//                // Clicking the card starts the station selection with pre-filled data
-//                showStationSelectionDialog(trip.sourceStationName, trip.destinationStationName)
-//            },
-//            onEdit = { trip ->
-//                // Clicking Edit opens the same dialog (logic handles pre-filling)
-//                showStationSelectionDialog(trip.sourceStationName, trip.destinationStationName)
-//            },
-//            onDelete = { trip ->
-//                deleteTrip(trip)
-//            }
-//        )
-//
-//        rv.layoutManager = LinearLayoutManager(this)
-//        rv.adapter = scheduledTripAdapter
-//    }
     private fun setupClickListeners() {
-        findViewById<View>(R.id.btnStartJourney).setOnClickListener {
-            showStationSelectionDialog()
-        }
+//        findViewById<View>(R.id.btnStartJourney).setOnClickListener {
+//            showStationSelectionDialog()
+//        }
         findViewById<View>(R.id.btnAccount).setOnClickListener {
             handleGoogleSignIn()
         }
@@ -897,6 +932,18 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<MaterialCardView>(R.id.btnViewDashboard)?.setOnClickListener {
             openDashboard()
+        }
+        findViewById<MaterialToolbar>(R.id.toolbar)?.apply {
+            inflateMenu(R.menu.main_menu)
+            setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.action_settings -> {
+                        startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                        true
+                    }
+                    else -> false
+                }
+            }
         }
     }
     private fun openAppGuide() {
@@ -938,10 +985,10 @@ class MainActivity : AppCompatActivity() {
         val routePreferenceGroup = dialog.findViewById<RadioGroup>(R.id.routePreferenceGroup)
 
         // SMS & Phone
-        val cbSms = dialog.findViewById<MaterialCheckBox>(R.id.cbEnableSms)
-        val layoutPhone = dialog.findViewById<LinearLayout>(R.id.layoutPhoneInput)
-        val phoneEt = dialog.findViewById<TextInputEditText>(R.id.etPhoneNumber)
-        val btnPickContact = dialog.findViewById<MaterialButton>(R.id.btnPickContact)
+//        val cbSms = dialog.findViewById<MaterialCheckBox>(R.id.cbEnableSms)
+//        val layoutPhone = dialog.findViewById<LinearLayout>(R.id.layoutPhoneInput)
+//        val phoneEt = dialog.findViewById<TextInputEditText>(R.id.etPhoneNumber)
+//        val btnPickContact = dialog.findViewById<MaterialButton>(R.id.btnPickContact)
 
         // Schedule Logic
         val switchSchedule = dialog.findViewById<SwitchMaterial>(R.id.switchSchedule)
@@ -958,8 +1005,8 @@ class MainActivity : AppCompatActivity() {
         // --- 1. SETUP DEFAULTS ---
         prefilledSource?.let { sourceAtv.setText(it) }
         prefilledDest?.let { destAtv.setText(it) }
-        currentDialogPhoneField = phoneEt
-        phoneEt.setText(prefs.getString("last_phone", ""))
+        //currentDialogPhoneField = phoneEt
+        //phoneEt.setText(prefs.getString("last_phone", ""))
 
         // --- 2. LOAD STATIONS FOR AUTOCOMPLETE ---
         lifecycleScope.launch(Dispatchers.IO) {
@@ -1028,19 +1075,32 @@ class MainActivity : AppCompatActivity() {
                             }
                             return@launch
                         }
+                        val settings = db.userSettingsDao().getUserSettingsOnce()
+                        val emergencyContact = settings?.emergencyContact ?: ""
 
+                        // Check if emergency contact is set
+                        if (emergencyContact.isEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    "Please set emergency contact in Settings first",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                            return@launch
+                        }
                         // No active trip - proceed with validation and trip creation
                         withContext(Dispatchers.Main) {
-                            var phone = ""
-                            if (cbSms.isChecked) {
-                                val rawPhone = phoneEt.text.toString().replace("\\s".toRegex(), "")
-                                if (rawPhone.length != 10 || !rawPhone.all { it.isDigit() }) {
-                                    Toast.makeText(this@MainActivity, "Enter valid 10-digit number!", Toast.LENGTH_SHORT).show()
-                                    return@withContext
-                                }
-                                phone = rawPhone
-                                prefs.edit().putString("last_phone", phone).apply()
-                            }
+//                            var phone = ""
+//                            if (cbSms.isChecked) {
+//                                val rawPhone = phoneEt.text.toString().replace("\\s".toRegex(), "")
+//                                if (rawPhone.length != 10 || !rawPhone.all { it.isDigit() }) {
+//                                    Toast.makeText(this@MainActivity, "Enter valid 10-digit number!", Toast.LENGTH_SHORT).show()
+//                                    return@withContext
+//                                }
+//                                phone = rawPhone
+//                                prefs.edit { putString("last_phone", phone) }
+//                            }
 
                             val selectedPreference = when (routePreferenceGroup.checkedRadioButtonId) {
                                 R.id.rbLeastInterchanges -> RoutePlanner.RoutePreference.LEAST_INTERCHANGES
@@ -1049,7 +1109,7 @@ class MainActivity : AppCompatActivity() {
                             dialog.dismiss()
 
                             // CALLING THE RESTORED FUNCTION
-                            createNewTripAndStartService(sourceName, destName, phone, selectedPreference)
+                            createNewTripAndStartService(sourceName, destName, emergencyContact, selectedPreference)
                         }
                     }
                 }
@@ -1087,10 +1147,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         // --- 5. OTHER LISTENERS ---
-        cbSms.setOnCheckedChangeListener { _, isChecked ->
-            layoutPhone.visibility = if (isChecked) View.VISIBLE else View.GONE
-        }
-        btnPickContact.setOnClickListener { contactPickerLauncher.launch(null) }
+//        cbSms.setOnCheckedChangeListener { _, isChecked ->
+//            layoutPhone.visibility = if (isChecked) View.VISIBLE else View.GONE
+//        }
+//        btnPickContact.setOnClickListener { contactPickerLauncher.launch(null) }
         toolbar.setNavigationOnClickListener { dialog.dismiss() }
         btnCancel.setOnClickListener { dialog.dismiss() }
 
@@ -1110,9 +1170,9 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
             } else {
                 try {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$sarthiPackage")))
+                    startActivity(Intent(Intent.ACTION_VIEW, "market://details?id=$sarthiPackage".toUri()))
                 } catch (e: Exception) {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$sarthiPackage")))
+                    startActivity(Intent(Intent.ACTION_VIEW, "https://play.google.com/store/apps/details?id=$sarthiPackage".toUri()))
                 }
             }
         }
@@ -1204,7 +1264,7 @@ class MainActivity : AppCompatActivity() {
 
         if (deviceId == null) {
             deviceId = java.util.UUID.randomUUID().toString()
-            prefs.edit().putString("device_id", deviceId).apply()
+            prefs.edit { putString("device_id", deviceId) }
         }
         return deviceId
     }
@@ -1217,11 +1277,7 @@ class MainActivity : AppCompatActivity() {
         val hour = timeParts[0].toInt()
         val min = timeParts[1].toInt()
 
-        val spinnerReminder = dialog.findViewById<Spinner>(R.id.spinnerReminder)
         val radioGroupFreq = dialog.findViewById<RadioGroup>(R.id.radioGroupFrequency)
-
-        val reminderText = spinnerReminder.selectedItem?.toString() ?: "10"
-        val reminderMin = reminderText.filter { it.isDigit() }.toIntOrNull() ?: 10
 
         val isRecurring = (radioGroupFreq.checkedRadioButtonId == R.id.radioRecurring)
         val daysList = mutableListOf<String>()
@@ -1234,14 +1290,16 @@ class MainActivity : AppCompatActivity() {
             if (dialog.findViewById<CheckBox>(R.id.checkSat).isChecked) daysList.add("SAT")
             if (dialog.findViewById<CheckBox>(R.id.checkSun).isChecked) daysList.add("SUN")
         }
+        val reminderMin = getSharedPreferences("settings", MODE_PRIVATE)
+            .getInt("default_reminder_minutes", 30)
 
-        saveScheduledTrip(0, sId, sName, dId, dName, hour, min, reminderMin, isRecurring, daysList.joinToString(","))
+        saveScheduledTrip(0, sId, sName, dId, dName, hour, min,reminderMin,isRecurring, daysList.joinToString(","))
         dialog.dismiss()
     }
 
     private fun saveScheduledTrip(
         id: Long, sId: String, sName: String, dId: String, dName: String,
-        hour: Int, min: Int, reminder: Int, isRecurring: Boolean, recurringDays: String
+        hour: Int, min: Int,reminder: Int, isRecurring: Boolean, recurringDays: String
     ) {
         lifecycleScope.launch(Dispatchers.IO) {
             // Calculate scheduledDate for one-time trips
@@ -1293,6 +1351,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun handleNotificationIntent(intent: Intent?) {
         val tripId = intent?.getLongExtra("START_TRIP_ID", -1L) ?: -1L
         if (tripId != -1L) {

@@ -123,7 +123,6 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
     private fun addMinutesToTime(timeStr: String?, minutesToAdd: Int): String {
         if (timeStr.isNullOrEmpty()) return "--:--"
         return try {
-            // .trim() removes any accidental spaces
             val cleanTime = timeStr.trim()
             val parts = cleanTime.split(":")
 
@@ -154,7 +153,6 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
 
     override fun getItemCount() = stations.size
 
-    // ... (Keep all your existing helper functions below)
     private fun createCircleDrawable(color: Int) = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(color) }
     private fun createGlowDrawable(color: Int) = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(adjustAlpha(color, 0.3f)) }
     private fun createBadgeDrawable(bgColor: Int) = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; cornerRadius = 12f; setColor(bgColor) }

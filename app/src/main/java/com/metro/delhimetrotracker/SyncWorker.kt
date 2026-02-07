@@ -9,7 +9,12 @@ import com.metro.delhimetrotracker.MetroTrackerApplication
 import com.metro.delhimetrotracker.data.local.database.entities.Trip
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
-
+import java.util.Date
+import android.util.Log
+import com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod
+import com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint
+import com.metro.delhimetrotracker.data.local.database.AppDatabase
+import com.metro.delhimetrotracker.data.local.database.entities.TripStatus
 class SyncWorker(
     appContext: Context,
     workerParams: WorkerParameters
@@ -98,74 +103,103 @@ class SyncWorker(
     }
 
     private suspend fun pullFromFirestore(
-        db: com.metro.delhimetrotracker.data.local.database.AppDatabase,
+        db: AppDatabase,
         userId: String,
         firestore: FirebaseFirestore
     ) {
-        // 1. Get the last sync time (You should save this in SharedPrefs ideally)
-        // For now, we fetch everything, or you can implement a SharedPrefs check here.
-        val lastSyncTime: Long = 0
-
         val snapshot = firestore.collection("users")
             .document(userId)
             .collection("trips")
-            .whereGreaterThan("lastModified", lastSyncTime)
             .get()
             .await()
 
         for (document in snapshot.documents) {
-            // 1. Parse Basic Trip Data
-            // Note: Ideally use .toObject(Trip::class.java) if field names match exactly.
-            // Here we assume the Trip exists or is inserted via a similar mapping.
 
             val tripId = document.getLong("id") ?: continue
+            val isDeleted = document.getBoolean("isDeleted") ?: false
+            if (isDeleted) continue
 
-            // (Optional: Insert the Trip entity here if it doesn't exist locally)
-            // val trip = document.toObject(Trip::class.java)
-            // db.tripDao().insertTrip(trip)
+            // 1️⃣ Parse checkpoints FIRST
+            val checkpointsRaw =
+                document.get("checkpoints") as? List<Map<String, Any>> ?: emptyList()
 
-            // 2. 🔥 PARSE CHECKPOINTS
-            val checkpointsList = document.get("checkpoints") as? List<Map<String, Any>>
+            val orderedStations = checkpointsRaw
+                .sortedBy { (it["stationOrder"] as? Long) ?: 0L }
+                .mapNotNull { it["stationId"] as? String }
+                .distinct()
 
-            checkpointsList?.forEach { map ->
-                try {
-                    // Handle Enum conversion safely
-                    val methodString = map["detectionMethod"] as? String ?: "GPS"
-                    val methodEnum = try {
-                        com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod.valueOf(methodString)
-                    } catch (e: Exception) {
-                        com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod.GPS
-                    }
+            // 2️⃣ Insert Trip WITHOUT visitedStations
+            val trip = Trip(
+                id = tripId,
+                sourceStationId = document.getString("sourceStationId") ?: "",
+                sourceStationName = document.getString("sourceStationName") ?: "",
+                destinationStationId = document.getString("destinationStationId") ?: "",
+                destinationStationName = document.getString("destinationStationName") ?: "",
+                metroLine = document.getString("metroLine") ?: "",
+                startTime = Date(document.getLong("startTime") ?: 0L),
+                endTime = document.getLong("endTime")?.let { Date(it) },
+                durationMinutes = document.getLong("durationMinutes")?.toInt(),
+                visitedStations = orderedStations, // IMPORTANT
+                fare = document.getDouble("fare"),
+                status = TripStatus.valueOf(document.getString("status") ?: "COMPLETED"),
+                emergencyContact = document.getString("emergencyContact") ?: "",
+                smsCount = document.getLong("smsCount")?.toInt() ?: 0,
+                createdAt = Date(document.getLong("createdAt") ?: System.currentTimeMillis()),
+                notes = document.getString("notes"),
+                hadSosAlert = document.getBoolean("hadSosAlert") ?: false,
+                sosStationName = document.getString("sosStationName"),
+                sosTimestamp = document.getLong("sosTimestamp"),
+                cancellationReason = document.getString("cancellationReason"),
+                syncState = "SYNCED",
+                deviceId = document.getString("deviceId") ?: "cloud",
+                lastModified = document.getLong("lastModified") ?: System.currentTimeMillis(),
+                isDeleted = false,
+                schemaVersion = document.getLong("schemaVersion")?.toInt() ?: 1
+            )
 
-                    val checkpoint = com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint(
-                        tripId = tripId,
-                        stationId = map["stationId"] as String,
-                        stationName = map["stationName"] as String,
-                        stationOrder = (map["stationOrder"] as Long).toInt(),
-                        arrivalTime = java.util.Date(map["arrivalTime"] as Long),
-                        departureTime = (map["departureTime"] as? Long)?.let { java.util.Date(it) },
+            db.tripDao().insertTrip(trip)
 
-                        // ✅ Fixed: Enum Conversion
-                        detectionMethod = methodEnum,
+            // 3️⃣ Replace checkpoints
+            db.stationCheckpointDao().deleteCheckpointsByTrip(tripId)
 
-                        confidence = (map["confidence"] as? Double)?.toFloat() ?: 1.0f,
-                        smsSent = (map["smsSent"] as? Boolean) ?: false,
-                        smsTimestamp = (map["smsTimestamp"] as? Long)?.let { java.util.Date(it) },
-                        latitude = map["latitude"] as? Double,
-                        longitude = map["longitude"] as? Double,
-                        accuracy = (map["accuracy"] as? Double)?.toFloat(),
-                        timestamp = (map["timestamp"] as? Long) ?: System.currentTimeMillis()
-                    )
-
-                    // Insert into Local Room DB
-                    db.stationCheckpointDao().insertCheckpoint(checkpoint)
-
-                } catch (e: Exception) {
-                    android.util.Log.e("SyncWorker", "Error parsing checkpoint for trip $tripId", e)
-                }
+            checkpointsRaw.forEach { map ->
+                val checkpoint = StationCheckpoint(
+                    tripId = tripId,
+                    stationId = map["stationId"] as String,
+                    stationName = map["stationName"] as String,
+                    stationOrder = (map["stationOrder"] as Long).toInt(),
+                    arrivalTime = Date(map["arrivalTime"] as Long),
+                    departureTime = (map["departureTime"] as? Long)?.let { Date(it) },
+                    detectionMethod = DetectionMethod.valueOf(map["detectionMethod"] as String),
+                    confidence = (map["confidence"] as? Double)?.toFloat() ?: 1f,
+                    smsSent = map["smsSent"] as? Boolean ?: false,
+                    smsTimestamp = (map["smsTimestamp"] as? Long)?.let { Date(it) },
+                    latitude = map["latitude"] as? Double,
+                    longitude = map["longitude"] as? Double,
+                    accuracy = (map["accuracy"] as? Double)?.toFloat(),
+                    timestamp = map["timestamp"] as? Long
+                )
+                db.stationCheckpointDao().insertCheckpoint(checkpoint)
             }
+//            val gson = com.google.gson.Gson()
+//            // 4️⃣ 🔥 FORCE UPDATE visitedStations (THIS TRIGGERS FLOW)
+//            if (orderedStations.isNotEmpty()) {
+//                db.tripDao().updateVisitedStations(
+//                    tripId = tripId,
+//                    visitedListJson = gson.toJson(orderedStations), // ✅ JSON ARRAY
+//                    updateTime = System.currentTimeMillis()
+//                )
+//            }
+
+            android.util.Log.d(
+                "SYNC_REBUILD",
+                "Trip $tripId → stations=${orderedStations.size}, checkpoints=${checkpointsRaw.size}"
+            )
         }
     }
+
+
+
 
     // ✅ UPDATED: Now accepts checkpoints parameter
     private fun tripToFirestoreMap(trip: Trip, checkpoints: List<Map<String, Any?>>): Map<String, Any?> {
