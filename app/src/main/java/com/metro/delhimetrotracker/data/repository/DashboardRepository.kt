@@ -74,8 +74,22 @@ class DashboardRepository(private val database: AppDatabase) {
      * Get unique stations visited
      */
     private fun getUniqueStationsFlow(): Flow<Int> {
-        return tripDao.getCompletedTripsSafe().map { completedTrips ->
-            completedTrips.flatMap { it.visitedStations }.distinct().size
+        return tripDao.getCompletedTripsSafe().flatMapLatest { completedTrips ->
+            if (completedTrips.isEmpty()) {
+                flowOf(0)
+            } else {
+                combine(
+                    completedTrips.map { trip ->
+                        stationCheckpointDao.getCheckpointsForTripFlow(trip.id)
+                    }
+                ) { checkpointArrays ->
+                    checkpointArrays
+                        .flatMap { it.toList() }
+                        .map { checkpoint -> checkpoint.stationName }
+                        .distinct()
+                        .size
+                }
+            }
         }
     }
 

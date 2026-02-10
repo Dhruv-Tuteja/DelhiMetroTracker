@@ -136,20 +136,12 @@ class TripHistoryPageFragment : Fragment(), TripHistoryAdapter.OnTripDoubleTapLi
         view?.let { v ->
             Snackbar.make(v, "Trip deleted", Snackbar.LENGTH_LONG)
                 .setAction("UNDO") {
-                    // Restore trip
-                    lifecycleScope.launch {
-                        val db = (requireActivity().application as MetroTrackerApplication).database
-                        db.tripDao().restoreTrip(trip.tripId)
-
-                        // Sync the restoration to cloud
-                        (requireActivity() as? com.metro.delhimetrotracker.ui.MainActivity)?.performManualSync {
-                            // Refresh done
-                        }
-
-                        Toast.makeText(context, "Trip restored", Toast.LENGTH_SHORT).show()
+                    // ✅ Use MainActivity's restoreTrip for proper cloud sync
+                    (requireActivity() as? com.metro.delhimetrotracker.ui.MainActivity)?.restoreTrip(trip.tripId) {
+                        // Trip restored and synced successfully
                     }
                 }
-                .setDuration(4000)
+                .setDuration(5000)  // ✅ Give users 5 seconds to undo
                 .show()
         }
     }
