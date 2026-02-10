@@ -4,30 +4,35 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1E1E1E"
+    android:background="?attr/colorSurface"
     android:fitsSystemWindows="true">
 
+    <!-- Toolbar -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="#2C2C2C"
+        android:background="?attr/colorPrimary"
         android:elevation="4dp"
         app:title="@string/plan_your_journey"
         app:titleCentered="true"
-        app:titleTextColor="#FFFFFF" />
+        app:titleTextColor="?attr/colorOnPrimary"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="?attr/colorOnPrimary" />
 
+    <!-- Recharge Button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnRechargeCard"
         style="@style/Widget.MaterialComponents.Button.TextButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Recharge Metro Card"
-        android:textColor="#FFA726"
+        android:textColor="?attr/colorPrimary"
         app:icon="@android:drawable/ic_menu_send"
-        app:iconTint="#FFA726"
+        app:iconTint="?attr/colorPrimary"
         android:layout_marginTop="8dp"/>
 
+    <!-- Scrollable Content -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -40,12 +45,13 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- Main Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="#2C2C2C"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="12dp">
 
                 <LinearLayout
@@ -54,21 +60,22 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
+                    <!-- Source Station Input -->
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
                         android:hint="Starting Station"
-                        app:boxBackgroundColor="#1E1E1E"
-                        app:boxStrokeColor="#64B5F6"
+                        app:boxBackgroundColor="?attr/colorSurface"
+                        app:boxStrokeColor="?attr/colorPrimary"
                         app:boxCornerRadiusTopStart="8dp"
                         app:boxCornerRadiusTopEnd="8dp"
                         app:boxCornerRadiusBottomStart="8dp"
                         app:boxCornerRadiusBottomEnd="8dp"
-                        app:hintTextColor="#64B5F6"
+                        app:hintTextColor="?attr/colorPrimary"
                         app:startIconDrawable="@android:drawable/ic_menu_mylocation"
-                        app:startIconTint="#64B5F6">
+                        app:startIconTint="?attr/colorPrimary">
 
                         <AutoCompleteTextView
                             android:id="@+id/sourceAutoComplete"
@@ -76,9 +83,10 @@
                             android:layout_height="wrap_content"
                             android:inputType="text"
                             android:textSize="14sp"
-                            android:textColor="#FFFFFF" />
+                            android:textColor="?attr/colorOnSurface" />
                     </com.google.android.material.textfield.TextInputLayout>
 
+                    <!-- Swap Button Section -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -86,7 +94,11 @@
                         android:gravity="center"
                         android:layout_marginVertical="8dp">
 
-                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#424242"/>
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1"
+                            android:background="?attr/colorOutlineVariant"/>
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnSwapStations"
@@ -95,28 +107,33 @@
                             android:layout_height="40dp"
                             android:layout_marginHorizontal="8dp"
                             app:icon="@drawable/ic_swap_stations"
-                            app:iconTint="#64B5F6"
+                            app:iconTint="?attr/colorPrimary"
                             app:iconSize="24dp"
                             android:contentDescription="Swap stations" />
 
-                        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#424242"/>
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1"
+                            android:background="?attr/colorOutlineVariant"/>
                     </LinearLayout>
 
+                    <!-- Destination Station Input -->
                     <com.google.android.material.textfield.TextInputLayout
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
                         android:hint="Destination Station"
-                        app:boxBackgroundColor="#1E1E1E"
-                        app:boxStrokeColor="#64B5F6"
+                        app:boxBackgroundColor="?attr/colorSurface"
+                        app:boxStrokeColor="?attr/colorPrimary"
                         app:boxCornerRadiusTopStart="8dp"
                         app:boxCornerRadiusTopEnd="8dp"
                         app:boxCornerRadiusBottomStart="8dp"
                         app:boxCornerRadiusBottomEnd="8dp"
-                        app:hintTextColor="#64B5F6"
+                        app:hintTextColor="?attr/colorPrimary"
                         app:startIconDrawable="@android:drawable/ic_menu_compass"
-                        app:startIconTint="#64B5F6">
+                        app:startIconTint="?attr/colorPrimary">
 
                         <AutoCompleteTextView
                             android:id="@+id/destinationAutoComplete"
@@ -124,17 +141,23 @@
                             android:layout_height="wrap_content"
                             android:inputType="text"
                             android:textSize="14sp"
-                            android:textColor="#FFFFFF" />
+                            android:textColor="?attr/colorOnSurface" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#424242" android:layout_marginVertical="12dp"/>
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/colorOutlineVariant"
+                        android:layout_marginVertical="12dp"/>
 
+                    <!-- Route Preference Section -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="ROUTE PREFERENCE"
                         android:textSize="10sp"
-                        android:textColor="#90A4AE"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textStyle="bold"
                         android:letterSpacing="0.1"
                         android:layout_marginBottom="8dp"/>
@@ -146,30 +169,33 @@
                         android:orientation="horizontal"
                         android:layout_marginBottom="12dp">
 
-                        <com.google.android.material.radiobutton.MaterialRadioButton
+                        <RadioButton
                             android:id="@+id/rbShortestPath"
-                            android:layout_width="0dp"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Shortest Path"
-                            android:textColor="#FFFFFF"
-                            android:textSize="13sp"
+                            android:text="Fastest Route"
+                            android:textColor="?attr/colorOnSurface"
+                            android:buttonTint="?attr/colorPrimary"
                             android:checked="true"
-                            app:buttonTint="#64B5F6"/>
+                            android:layout_marginEnd="16dp"/>
 
-                        <com.google.android.material.radiobutton.MaterialRadioButton
+                        <RadioButton
                             android:id="@+id/rbLeastInterchanges"
-                            android:layout_width="0dp"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Least Interchanges"
-                            android:textColor="#FFFFFF"
-                            android:textSize="13sp"
-                            app:buttonTint="#64B5F6"/>
+                            android:text="Least Changes"
+                            android:textColor="?attr/colorOnSurface"
+                            android:buttonTint="?attr/colorPrimary"/>
                     </RadioGroup>
 
-                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#424242" android:layout_marginVertical="12dp"/>
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="?attr/colorOutlineVariant"
+                        android:layout_marginVertical="12dp"/>
 
+                    <!-- Schedule Section -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -181,7 +207,7 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:src="@drawable/ic_notification"
-                            app:tint="#64B5F6"
+                            app:tint="?attr/colorPrimary"
                             android:layout_marginEnd="8dp"/>
 
                         <TextView
@@ -189,17 +215,16 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Schedule for later"
-                            android:textColor="#FFFFFF"
+                            android:textColor="?attr/colorOnSurface"
                             android:textSize="14sp"/>
 
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/switchSchedule"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:thumbTint="#64B5F6"
-                            app:trackTint="#4064B5F6"/>
+                            android:layout_height="wrap_content"/>
                     </LinearLayout>
 
+                    <!-- Schedule Options (Hidden by default) -->
                     <LinearLayout
                         android:id="@+id/layoutScheduleOptions"
                         android:layout_width="match_parent"
@@ -208,49 +233,46 @@
                         android:visibility="gone"
                         android:layout_marginBottom="16dp">
 
+                        <!-- Time Selector -->
                         <TextView
                             android:id="@+id/tvSelectTime"
                             android:layout_width="match_parent"
                             android:layout_height="48dp"
                             android:background="@drawable/shape_glow_circle"
-                            android:backgroundTint="#1E1E1E"
+                            android:backgroundTint="?attr/colorSurface"
                             android:gravity="center_vertical"
                             android:paddingStart="12dp"
                             android:text="Select Time"
-                            android:textColor="#FFFFFF"
+                            android:textColor="?attr/colorOnSurface"
                             android:layout_marginBottom="12dp"/>
 
-<!--                        <Spinner-->
-<!--                            android:id="@+id/spinnerReminder"-->
-<!--                            android:layout_width="match_parent"-->
-<!--                            android:layout_height="48dp"-->
-<!--                            android:entries="@array/reminder_options"-->
-<!--                            android:backgroundTint="#FFFFFF"-->
-<!--                            android:layout_marginBottom="12dp"/>-->
-
+                        <!-- Frequency Radio Group -->
                         <RadioGroup
                             android:id="@+id/radioGroupFrequency"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal">
+
                             <RadioButton
                                 android:id="@+id/radioOneTime"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="One Time"
-                                android:textColor="#FFFFFF"
-                                android:buttonTint="#64B5F6"
+                                android:textColor="?attr/colorOnSurface"
+                                android:buttonTint="?attr/colorPrimary"
                                 android:checked="true"
                                 android:layout_marginEnd="16dp"/>
+
                             <RadioButton
                                 android:id="@+id/radioRecurring"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Recurring"
-                                android:textColor="#FFFFFF"
-                                android:buttonTint="#64B5F6"/>
+                                android:textColor="?attr/colorOnSurface"
+                                android:buttonTint="?attr/colorPrimary"/>
                         </RadioGroup>
 
+                        <!-- Days Selection (Hidden by default) -->
                         <LinearLayout
                             android:id="@+id/layoutDays"
                             android:layout_width="match_parent"
@@ -258,17 +280,75 @@
                             android:orientation="vertical"
                             android:visibility="gone"
                             android:layout_marginTop="8dp">
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                                <CheckBox android:id="@+id/checkMon" android:text="Mon" android:textColor="#FFF" android:buttonTint="#64B5F6" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-                                <CheckBox android:id="@+id/checkTue" android:text="Tue" android:textColor="#FFF" android:buttonTint="#64B5F6" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-                                <CheckBox android:id="@+id/checkWed" android:text="Wed" android:textColor="#FFF" android:buttonTint="#64B5F6" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-                                <CheckBox android:id="@+id/checkThu" android:text="Thu" android:textColor="#FFF" android:buttonTint="#64B5F6" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content">
+                                <CheckBox
+                                    android:id="@+id/checkMon"
+                                    android:text="Mon"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:buttonTint="?attr/colorPrimary"
+                                    android:layout_weight="1"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"/>
+                                <CheckBox
+                                    android:id="@+id/checkTue"
+                                    android:text="Tue"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:buttonTint="?attr/colorPrimary"
+                                    android:layout_weight="1"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"/>
+                                <CheckBox
+                                    android:id="@+id/checkWed"
+                                    android:text="Wed"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:buttonTint="?attr/colorPrimary"
+                                    android:layout_weight="1"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"/>
+                                <CheckBox
+                                    android:id="@+id/checkThu"
+                                    android:text="Thu"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:buttonTint="?attr/colorPrimary"
+                                    android:layout_weight="1"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"/>
                             </LinearLayout>
-                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                                <CheckBox android:id="@+id/checkFri" android:text="Fri" android:textColor="#FFF" android:buttonTint="#64B5F6" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-                                <CheckBox android:id="@+id/checkSat" android:text="Sat" android:textColor="#FFF" android:buttonTint="#64B5F6" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-                                <CheckBox android:id="@+id/checkSun" android:text="Sun" android:textColor="#FFF" android:buttonTint="#64B5F6" android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
-                                <View android:layout_weight="1" android:layout_width="0dp" android:layout_height="wrap_content"/>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content">
+                                <CheckBox
+                                    android:id="@+id/checkFri"
+                                    android:text="Fri"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:buttonTint="?attr/colorPrimary"
+                                    android:layout_weight="1"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"/>
+                                <CheckBox
+                                    android:id="@+id/checkSat"
+                                    android:text="Sat"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:buttonTint="?attr/colorPrimary"
+                                    android:layout_weight="1"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"/>
+                                <CheckBox
+                                    android:id="@+id/checkSun"
+                                    android:text="Sun"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:buttonTint="?attr/colorPrimary"
+                                    android:layout_weight="1"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"/>
+                                <View
+                                    android:layout_weight="1"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"/>
                             </LinearLayout>
                         </LinearLayout>
                     </LinearLayout>
@@ -278,12 +358,13 @@
         </LinearLayout>
     </ScrollView>
 
+    <!-- Bottom Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        android:background="#1E1E1E">
+        android:background="?attr/colorSurface">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancel"
@@ -293,10 +374,10 @@
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
             android:text="Cancel"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/colorOnSurface"
             android:insetTop="0dp"
             android:insetBottom="0dp"
-            app:strokeColor="#64B5F6"
+            app:strokeColor="?attr/colorPrimary"
             app:cornerRadius="12dp"/>
 
         <com.google.android.material.button.MaterialButton
@@ -306,10 +387,10 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:text="START"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/colorOnPrimary"
             android:insetTop="0dp"
             android:insetBottom="0dp"
-            app:backgroundTint="#64B5F6"
+            app:backgroundTint="?attr/colorPrimary"
             app:cornerRadius="12dp"/>
     </LinearLayout>
 

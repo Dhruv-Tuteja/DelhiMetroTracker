@@ -8,6 +8,7 @@
     android:paddingStart="20dp"
     android:paddingEnd="20dp">
 
+    <!-- Node Container -->
     <FrameLayout
         android:id="@+id/nodeContainer"
         android:layout_width="wrap_content"
@@ -24,35 +25,38 @@
             android:visibility="invisible"
             android:layout_gravity="center"
             android:background="@drawable/shape_glow_circle" />
+
         <View
             android:id="@+id/nodeDot"
             android:layout_width="16dp"
             android:layout_height="16dp"
             android:layout_gravity="center"
             android:background="@drawable/shape_circle" />
-
     </FrameLayout>
 
+    <!-- Top Line -->
     <View
         android:id="@+id/lineTop"
         android:layout_width="3dp"
         android:layout_height="0dp"
-        android:background="#2A3555"
+        android:background="?attr/colorOutlineVariant"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/nodeContainer"
         app:layout_constraintStart_toStartOf="@id/nodeContainer"
         app:layout_constraintEnd_toEndOf="@id/nodeContainer" />
 
+    <!-- Bottom Line -->
     <View
         android:id="@+id/lineBottom"
         android:layout_width="3dp"
         android:layout_height="0dp"
-        android:background="#2A3555"
+        android:background="?attr/colorOutlineVariant"
         app:layout_constraintTop_toBottomOf="@id/nodeContainer"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="@id/nodeContainer"
         app:layout_constraintEnd_toEndOf="@id/nodeContainer" />
 
+    <!-- Station Card -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/stationCard"
         android:layout_width="0dp"
@@ -60,11 +64,11 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
-        app:cardBackgroundColor="#0F1429"
+        app:cardBackgroundColor="?attr/colorSurface"
         app:cardCornerRadius="12dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="1dp"
-        app:strokeColor="#2A3555"
+        app:cardElevation="2dp"
+        app:strokeWidth="2dp"
+        app:strokeColor="?attr/colorOutlineVariant"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toEndOf="@id/nodeContainer"
         app:layout_constraintEnd_toEndOf="parent">
@@ -89,7 +93,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/colorOnSurface"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:letterSpacing="-0.01"
@@ -100,7 +104,7 @@
                     android:id="@+id/tvExpectedTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="#4CAF50"
+                    android:textColor="@color/accent_green"
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:visibility="visible"
@@ -117,16 +121,14 @@
                 android:paddingTop="3dp"
                 android:paddingBottom="3dp"
                 android:background="@drawable/status_badge_background"
-                android:textColor="#6B7BA8"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.1"
                 android:visibility="gone"
                 tools:visibility="visible"
                 tools:text="VISITED"/>
-
         </LinearLayout>
-
     </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,6 +1,6 @@
 package com.metro.delhimetrotracker.ui
 
-import android.graphics.Color
+import com.google.android.material.color.MaterialColors
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
@@ -10,14 +10,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.MetroStation
+import android.graphics.Color
 
 class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
 
     private var lastPosition = -1
     private var stations = listOf<MetroStation>()
     private var visitedIds = listOf<String>()
-
-    // Store the base time from the activity
     private var baseTimeForCalculation: String? = null
 
     fun submitData(newStations: List<MetroStation>, visited: List<String>) {
@@ -26,7 +25,6 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
         notifyDataSetChanged()
     }
 
-    // Call this from TrackingActivity to pass the train time
     fun updateBaseTime(time: String?) {
         this.baseTimeForCalculation = time
         notifyDataSetChanged()
@@ -43,81 +41,158 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
 
         val visitedIdsSet = visitedIds.toSet()
         val isVisited = visitedIdsSet.contains(station.stationId)
-
-        // Identifies the current target station
         val isUpcoming = !isVisited && (position == 0 || visitedIdsSet.contains(stations[position - 1].stationId))
 
-        // 1. GET COLOR
+        // Get theme colors
+        val colorPrimary = MaterialColors.getColor(holder.itemView, com.google.android.material.R.attr.colorPrimary)
+        val colorOnSurface = MaterialColors.getColor(holder.itemView, com.google.android.material.R.attr.colorOnSurface)
+        val colorOnSurfaceVariant = MaterialColors.getColor(holder.itemView, com.google.android.material.R.attr.colorOnSurfaceVariant)
+        val colorSurface = MaterialColors.getColor(holder.itemView, com.google.android.material.R.attr.colorSurface)
+        val colorSurfaceVariant = MaterialColors.getColor(holder.itemView, com.google.android.material.R.attr.colorSurfaceVariant)
+        val colorOutlineVariant = MaterialColors.getColor(holder.itemView, com.google.android.material.R.attr.colorOutlineVariant)
+
+        // Parse line color
         val lineColorInt = try {
-            Color.parseColor(station.lineColor)
+            android.graphics.Color.parseColor(station.lineColor)
         } catch (e: Exception) {
-            Color.parseColor("#FFEB3B")
+            colorPrimary
         }
 
-        // 2. APPLY LINE COLORS (Fixes the missing colors)
+        // LINE VISIBILITY
         holder.lineTop.visibility = if (position == 0) View.INVISIBLE else View.VISIBLE
         holder.lineBottom.visibility = if (position == stations.size - 1) View.INVISIBLE else View.VISIBLE
 
-        // Top Line Logic
+        // CALCULATE BRIGHTER COLOR FOR VISITED LINES (much more visible in dark mode)
+        val visitedLineColor = if (isDarkTheme(holder.itemView.context)) {
+            // In dark mode: use a brighter gray that's clearly visible
+            Color.parseColor("#6B7BA8") // Light gray-blue
+        } else {
+            // In light mode: use medium gray
+            Color.parseColor("#9E9E9E") // Medium gray
+        }
+
+        // LINE COLORS - Much better visibility
         if (position > 0) {
             val prevVisited = visitedIdsSet.contains(stations[position - 1].stationId)
-            holder.lineTop.setBackgroundColor(if (prevVisited) Color.GRAY else lineColorInt)
+            holder.lineTop.setBackgroundColor(
+                if (prevVisited) {
+                    visitedLineColor
+                } else {
+                    lineColorInt
+                }
+            )
         }
-        // Bottom Line Logic
-        holder.lineBottom.setBackgroundColor(if (isVisited) Color.GRAY else lineColorInt)
 
-        // 3. APPLY NODE COLOR
-        holder.nodeDot.background = createCircleDrawable(if (isVisited) Color.GRAY else lineColorInt)
+        holder.lineBottom.setBackgroundColor(
+            if (isVisited) {
+                visitedLineColor
+            } else {
+                lineColorInt
+            }
+        )
 
-        // 4. STYLE THE CARD
+        // NODE DOT COLOR - Better visibility
+        val visitedNodeColor = if (isDarkTheme(holder.itemView.context)) {
+            Color.parseColor("#8A94B8") // Lighter gray for dark mode
+        } else {
+            Color.parseColor("#757575") // Medium gray for light mode
+        }
+
+        holder.nodeDot.background = createCircleDrawable(
+            if (isVisited) visitedNodeColor else lineColorInt
+        )
+
+        // CARD STYLING
         when {
             isUpcoming -> {
-                holder.tvName.setTextColor(Color.WHITE)
+                // UPCOMING STATION - HIGHLIGHTED
+                holder.tvName.setTextColor(colorOnSurface)
+
                 holder.nodeGlow.visibility = View.VISIBLE
                 holder.nodeGlow.background = createGlowDrawable(lineColorInt)
 
                 holder.tvStatus.visibility = View.VISIBLE
                 holder.tvStatus.text = "UPCOMING"
                 holder.tvStatus.setTextColor(lineColorInt)
-                holder.tvStatus.background = createBadgeDrawable(adjustAlpha(lineColorInt, 0.2f))
+                holder.tvStatus.background = createBadgeDrawable(adjustAlpha(lineColorInt, 0.15f))
 
-                holder.stationCard.setCardBackgroundColor(Color.parseColor("#1A2645"))
+                holder.stationCard.setCardBackgroundColor(colorSurfaceVariant)
                 holder.stationCard.strokeColor = lineColorInt
-                holder.stationCard.strokeWidth = 4
+                holder.stationCard.strokeWidth = 6
 
-                // --- TIME LOGIC: Show +2 mins for the Upcoming Station ---
+                // Show expected time for upcoming station
                 if (baseTimeForCalculation != null) {
                     holder.tvExpectedTime.text = addMinutesToTime(baseTimeForCalculation, 2)
                     holder.tvExpectedTime.visibility = View.VISIBLE
-                    holder.tvExpectedTime.setTextColor(Color.parseColor("#4CAF50"))
+                    holder.tvExpectedTime.setTextColor(colorPrimary)
                 } else {
                     holder.tvExpectedTime.visibility = View.GONE
                 }
             }
+
             isVisited -> {
-                holder.tvName.setTextColor(Color.parseColor("#8A94B8"))
+                // VISITED STATION - CLEARLY VISIBLE WITH BORDER
+                holder.tvName.setTextColor(colorOnSurfaceVariant)
+
                 holder.nodeGlow.visibility = View.INVISIBLE
+
                 holder.tvStatus.visibility = View.VISIBLE
                 holder.tvStatus.text = "VISITED"
-                holder.tvStatus.setTextColor(Color.GRAY)
-                holder.tvStatus.background = createBadgeDrawable(Color.parseColor("#1A2645"))
-                holder.stationCard.setCardBackgroundColor(Color.parseColor("#0F1429"))
-                holder.stationCard.strokeColor = Color.parseColor("#2A3555")
+
+                // Status badge color
+                val statusTextColor = if (isDarkTheme(holder.itemView.context)) {
+                    Color.parseColor("#8A94B8") // Lighter in dark mode
+                } else {
+                    Color.parseColor("#757575") // Darker in light mode
+                }
+                holder.tvStatus.setTextColor(statusTextColor)
+                holder.tvStatus.background = createBadgeDrawable(adjustAlpha(statusTextColor, 0.15f))
+
+                // CRITICAL FIX: Use contrasting background for visited cards
+                val visitedCardBg = if (isDarkTheme(holder.itemView.context)) {
+                    // In dark mode: slightly lighter than surface
+                    Color.parseColor("#1E2337") // Lighter dark blue
+                } else {
+                    // In light mode: white/surface color
+                    colorSurface
+                }
+                holder.stationCard.setCardBackgroundColor(visitedCardBg)
+
+                // CRITICAL FIX: Visible border for visited cards
+                val visitedBorderColor = if (isDarkTheme(holder.itemView.context)) {
+                    Color.parseColor("#3A4155") // Visible border in dark mode
+                } else {
+                    Color.parseColor("#E0E0E0") // Light gray border in light mode
+                }
+                holder.stationCard.strokeColor = visitedBorderColor
                 holder.stationCard.strokeWidth = 2
+
                 holder.tvExpectedTime.visibility = View.GONE
             }
+
             else -> {
-                // Future Stations
-                holder.tvName.setTextColor(Color.parseColor("#8A94B8"))
+                // FUTURE STATIONS - NORMAL APPEARANCE
+                holder.tvName.setTextColor(colorOnSurfaceVariant)
+
                 holder.nodeGlow.visibility = View.INVISIBLE
                 holder.tvStatus.visibility = View.GONE
-                holder.stationCard.setCardBackgroundColor(Color.parseColor("#0F1429"))
-                holder.stationCard.strokeColor = Color.parseColor("#2A3555")
+
+                holder.stationCard.setCardBackgroundColor(colorSurface)
+                holder.stationCard.strokeColor = colorOutlineVariant
                 holder.stationCard.strokeWidth = 2
+
                 holder.tvExpectedTime.visibility = View.GONE
             }
         }
+
         setAnimation(holder.itemView, position)
+    }
+
+    // Helper to detect dark theme
+    private fun isDarkTheme(context: android.content.Context): Boolean {
+        val nightModeFlags = context.resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        return nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
 
     private fun addMinutesToTime(timeStr: String?, minutesToAdd: Int): String {
@@ -126,25 +201,20 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
             val cleanTime = timeStr.trim()
             val parts = cleanTime.split(":")
 
-            // We only care about the first two parts (Hours and Minutes)
             var hours = parts[0].toInt()
             var minutes = parts[1].toInt()
 
-            // Apply the addition
             minutes += minutesToAdd
 
-            // Proper Rollover Logic
             while (minutes >= 60) {
                 hours = (hours + 1) % 24
                 minutes -= 60
             }
 
-            // AM/PM Conversion
             val amPm = if (hours >= 12) "PM" else "AM"
             var displayHour = hours % 12
             if (displayHour == 0) displayHour = 12
 
-            // Format strictly: "9:57 PM"
             String.format("%d:%02d %s", displayHour, minutes, amPm)
         } catch (e: Exception) {
             "--:--"
@@ -153,13 +223,33 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
 
     override fun getItemCount() = stations.size
 
-    private fun createCircleDrawable(color: Int) = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(color) }
-    private fun createGlowDrawable(color: Int) = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(adjustAlpha(color, 0.3f)) }
-    private fun createBadgeDrawable(bgColor: Int) = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; cornerRadius = 12f; setColor(bgColor) }
-    private fun adjustAlpha(color: Int, factor: Float) = Color.argb((255 * factor).toInt(), Color.red(color), Color.green(color), Color.blue(color))
+    private fun createCircleDrawable(color: Int) = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setColor(color)
+    }
+
+    private fun createGlowDrawable(color: Int) = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setColor(adjustAlpha(color, 0.25f))
+    }
+
+    private fun createBadgeDrawable(bgColor: Int) = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        cornerRadius = 12f
+        setColor(bgColor)
+    }
+
+    private fun adjustAlpha(color: Int, factor: Float): Int {
+        val alpha = (255 * factor).toInt().coerceIn(0, 255)
+        return (alpha shl 24) or (color and 0x00FFFFFF)
+    }
+
     private fun setAnimation(viewToAnimate: View, position: Int) {
         if (position > lastPosition) {
-            val animation = android.view.animation.AnimationUtils.loadAnimation(viewToAnimate.context, R.anim.item_animation_fall_down)
+            val animation = android.view.animation.AnimationUtils.loadAnimation(
+                viewToAnimate.context,
+                R.anim.item_animation_fall_down
+            )
             viewToAnimate.startAnimation(animation)
             lastPosition = position
         }

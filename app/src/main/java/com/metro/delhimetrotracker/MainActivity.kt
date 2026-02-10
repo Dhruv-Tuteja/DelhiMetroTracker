@@ -42,7 +42,7 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
@@ -68,8 +68,8 @@ import java.util.Date
 import androidx.appcompat.app.AppCompatDelegate
 import android.view.Menu
 import android.view.MenuItem
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
+import com.metro.delhimetrotracker.ui.dashboard.DashboardFragment
+import android.widget.ImageView
 
 class MainActivity : AppCompatActivity() {
 
@@ -77,10 +77,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var repository: MetroRepository
     private val auth = FirebaseAuth.getInstance()
 
-    // Global reference for contact picker result
-    private var currentDialogPhoneField: TextInputEditText? = null
-
-    // Multiple permissions handling logic
+    private lateinit var toolbar: MaterialToolbar
+    private lateinit var bottomNavigation: BottomNavigationView
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -90,6 +88,33 @@ class MainActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "⚠️ Tracking will not work correctly without permissions.", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun setupBottomNavigation() {
+        bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
+                    loadFragment(HomeFragment())
+                    true
+                }
+                R.id.nav_trips -> {
+                    // TODO: Replace with your actual Dashboard fragment class name
+                    loadFragment(DashboardFragment())
+                    true
+                }
+                R.id.nav_account -> {
+                    loadFragment(AccountFragment())
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun loadFragment(fragment: Fragment) {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, fragment)
+            .commit()
     }
 
     private val googleSignInLauncher = registerForActivityResult(
@@ -453,9 +478,12 @@ class MainActivity : AppCompatActivity() {
                 AppCompatDelegate.MODE_NIGHT_NO
         )
 
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayShowTitleEnabled(false)
+        bottomNavigation = findViewById(R.id.bottomNavigation)
+        setupBottomNavigation()
+        if (savedInstanceState == null) {
+            loadFragment(HomeFragment())
+            bottomNavigation.selectedItemId = R.id.nav_home
+        }
 
         // 3. Setup UI
         requestAllPermissions()
@@ -472,42 +500,42 @@ class MainActivity : AppCompatActivity() {
             val dest = intent.getStringExtra("PREFILL_DEST")
             showStationSelectionDialog(src, dest)
         }
-        updateStartJourneyButton()
+        //updateStartJourneyButton()
 
     }
-    private fun updateStartJourneyButton() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val db = (application as MetroTrackerApplication).database
-            val activeTrip = db.tripDao().getActiveTrip()
-
-            withContext(Dispatchers.Main) {
-                val btn = findViewById<MaterialButton>(R.id.btnStartJourney)
-
-                if (activeTrip != null) {
-                    // ACTIVE TRIP EXISTS
-                    btn.text = "Go to Active Trip"
-                    btn.setOnClickListener {
-                        val intent = Intent(this@MainActivity, TrackingActivity::class.java).apply {
-                            putExtra("EXTRA_TRIP_ID", activeTrip.id)
-                            putExtra("SOURCE_ID", activeTrip.sourceStationId)
-                            putExtra("DEST_ID", activeTrip.destinationStationId)
-                        }
-                        startActivity(intent)
-                    }
-                } else {
-                    // NO ACTIVE TRIP
-                    btn.text = "Start Your Journey"
-                    btn.setOnClickListener {
-                        showStationSelectionDialog(null, null)
-                    }
-                }
-            }
-        }
-    }
-    override fun onResume() {
-        super.onResume()
-        updateStartJourneyButton()
-    }
+//    fun updateStartJourneyButton() {
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            val db = (application as MetroTrackerApplication).database
+//            val activeTrip = db.tripDao().getActiveTrip()
+//
+//            withContext(Dispatchers.Main) {
+//                val btn = findViewById<MaterialButton>(R.id.btnStartJourney)
+//
+//                if (activeTrip != null) {
+//                    // ACTIVE TRIP EXISTS
+//                    btn.text = "Go to Active Trip"
+//                    btn.setOnClickListener {
+//                        val intent = Intent(this@MainActivity, TrackingActivity::class.java).apply {
+//                            putExtra("EXTRA_TRIP_ID", activeTrip.id)
+//                            putExtra("SOURCE_ID", activeTrip.sourceStationId)
+//                            putExtra("DEST_ID", activeTrip.destinationStationId)
+//                        }
+//                        startActivity(intent)
+//                    }
+//                } else {
+//                    // NO ACTIVE TRIP
+//                    btn.text = "Start Your Journey"
+//                    btn.setOnClickListener {
+//                        showStationSelectionDialog(null, null)
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    override fun onResume() {
+//        super.onResume()
+//        updateStartJourneyButton()
+//    }
 
 
     fun openStationSelector() {
@@ -553,10 +581,10 @@ class MainActivity : AppCompatActivity() {
         googleSignInClient = GoogleSignIn.getClient(this, gso)
     }
     private fun updateSignInButton() {
-        val btnAccount = findViewById<MaterialCardView>(R.id.btnAccount)
-        btnAccount?.let {
-            // TODO: Update UI based on currentUser != null
-        }
+//        val btnAccount = findViewById<MaterialCardView>(R.id.btnAccount)
+//        btnAccount?.let {
+//            // TODO: Update UI based on currentUser != null
+//        }
     }
     @SuppressLint("UnsafeIntentLaunch")
     private fun performSignOut() {
@@ -589,6 +617,11 @@ class MainActivity : AppCompatActivity() {
                     val user = auth.currentUser
                     Toast.makeText(this, "✅ Signed in as ${user?.email}", Toast.LENGTH_SHORT).show()
                     updateSignInButton()
+
+                    val currentFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
+                    if (currentFragment is AccountFragment) {
+                        loadFragment(AccountFragment())
+                    }
 
                     // 🛑 CRITICAL FIX: Wipe "Guest" trips AND scheduled trips before loading "User" data
                     lifecycleScope.launch(Dispatchers.IO) {
@@ -924,15 +957,15 @@ class MainActivity : AppCompatActivity() {
 //        findViewById<View>(R.id.btnStartJourney).setOnClickListener {
 //            showStationSelectionDialog()
 //        }
-        findViewById<View>(R.id.btnAccount).setOnClickListener {
-            handleGoogleSignIn()
-        }
-        findViewById<MaterialCardView>(R.id.btnAppInfo).setOnClickListener {
-            openAppGuide()
-        }
-        findViewById<MaterialCardView>(R.id.btnViewDashboard)?.setOnClickListener {
-            openDashboard()
-        }
+//        findViewById<View>(R.id.btnAccount).setOnClickListener {
+//            handleGoogleSignIn()
+//        }
+//        findViewById<MaterialCardView>(R.id.btnAppInfo).setOnClickListener {
+//            openAppGuide()
+//        }
+//        findViewById<MaterialCardView>(R.id.btnViewDashboard)?.setOnClickListener {
+//            openDashboard()
+//        }
         findViewById<MaterialToolbar>(R.id.toolbar)?.apply {
             inflateMenu(R.menu.main_menu)
             setOnMenuItemClickListener { menuItem ->
@@ -1432,15 +1465,230 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    fun signInWithGoogle() {
+        val signInIntent = googleSignInClient.signInIntent
+        googleSignInLauncher.launch(signInIntent)
+    }
+
+    fun signOut() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = (application as MetroTrackerApplication).database
+
+            // 1. CLEAR LOCAL DATA
+            db.tripDao().deleteAllTrips()
+            db.scheduledTripDao().deleteAll()
+
+            // Optional: clear prefs
+            getSharedPreferences("MetroPrefs", MODE_PRIVATE).edit { clear() }
+
+            withContext(Dispatchers.Main) {
+                // 2. SIGN OUT FROM AUTH
+                auth.signOut()
+                googleSignInClient.signOut()
+
+                Toast.makeText(this@MainActivity, "Signed out", Toast.LENGTH_SHORT).show()
+
+                // 3. REFRESH ACCOUNT SCREEN
+                val currentFragment =
+                    supportFragmentManager.findFragmentById(R.id.fragmentContainer)
+
+                if (currentFragment is AccountFragment) {
+                    loadFragment(AccountFragment())
+                }
+            }
+        }
+    }
+    fun showAccountBottomSheet() {
+        val dialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
+        dialog.setContentView(R.layout.activity_login)
+        dialog.show()
+        dialog.setContentView(R.layout.activity_login)
+
+        val tvTitle = dialog.findViewById<TextView>(R.id.tvTitle)
+        val tvSubtitle = dialog.findViewById<TextView>(R.id.tvSubtitle)
+        val btnAction = dialog.findViewById<MaterialButton>(R.id.btnAction)
+        val btnCancel = dialog.findViewById<MaterialButton>(R.id.btnCancel)
+        val btnClose = dialog.findViewById<ImageView>(R.id.btnClose)
+
+        val user = FirebaseAuth.getInstance().currentUser
+
+        if (user != null) {
+            // 🔹 SIGNED IN → LOGOUT CONFIRMATION
+            tvTitle?.text = "Sign out?"
+            tvSubtitle?.text = "Your trips will be removed from this device."
+            btnAction?.text = "Sign Out"
+
+            btnAction?.setOnClickListener {
+                dialog.dismiss()
+                signOut()
+            }
+        } else {
+            // 🔹 SIGNED OUT → SIGN IN
+            tvTitle?.text = "Sign in"
+            tvSubtitle?.text = "Sync your trips and preferences"
+            btnAction?.text = "Continue with Google"
+
+            btnAction?.setOnClickListener {
+                dialog.dismiss()
+                signInWithGoogle()
+            }
+        }
+
+        // ✅ Cancel button slides sheet down
+        btnCancel?.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        // ❌ Disable close (X) completely
+        btnClose?.visibility = View.GONE
+
+        dialog.show()
+    }
+
+
+}
+
+// ===== HOME FRAGMENT (embedded in MainActivity.kt) =====
+class HomeFragment : Fragment() {
+
+    private var startJourneyBtn: MaterialButton? = null
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        val view = inflater.inflate(R.layout.fragment_home, container, false)
+
+        startJourneyBtn = view.findViewById(R.id.btnStartJourney)
+
+        startJourneyBtn?.setOnClickListener {
+            handleStartJourneyClick()
+        }
+
+        return view
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshStartJourneyButton()
+    }
+
+    private fun refreshStartJourneyButton() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = (requireActivity().application as MetroTrackerApplication).database
+            val activeTrip = db.tripDao().getActiveTrip()
+
+            withContext(Dispatchers.Main) {
+                startJourneyBtn?.text =
+                    if (activeTrip != null) "Go to Active Trip"
+                    else "Start Your Journey"
+            }
+        }
+    }
+
+    private fun handleStartJourneyClick() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val db = (requireActivity().application as MetroTrackerApplication).database
+            val activeTrip = db.tripDao().getActiveTrip()
+
+            withContext(Dispatchers.Main) {
+                if (activeTrip != null) {
+                    val intent = Intent(requireContext(), TrackingActivity::class.java).apply {
+                        putExtra("EXTRA_TRIP_ID", activeTrip.id)
+                        putExtra("SOURCE_ID", activeTrip.sourceStationId)
+                        putExtra("DEST_ID", activeTrip.destinationStationId)
+                    }
+                    startActivity(intent)
+                } else {
+                    (requireActivity() as MainActivity).openStationSelector()
+                }
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        startJourneyBtn = null // 🚨 prevents memory leak
+    }
 }
 
 
+// ===== ACCOUNT FRAGMENT (embedded in MainActivity.kt) =====
+class AccountFragment : Fragment() {
+    private lateinit var cardSignIn: MaterialCardView
+    private lateinit var cardSettings: MaterialCardView
+    private lateinit var cardAppInfo: MaterialCardView
+    private lateinit var tvSignInStatus: TextView
+    private lateinit var tvUserEmail: TextView
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        val view = inflater.inflate(R.layout.fragment_account, container, false)
+
+        // Initialize views
+        cardSignIn = view.findViewById(R.id.cardSignIn)
+        cardSettings = view.findViewById(R.id.cardSettings)
+        cardAppInfo = view.findViewById(R.id.cardAppInfo)
+        tvSignInStatus = view.findViewById(R.id.tvSignInStatus)
+        tvUserEmail = view.findViewById(R.id.tvUserEmail)
+
+        // Update UI based on sign-in status
+        updateSignInUI()
+
+        // Set click listeners
+        cardSignIn.setOnClickListener {
+            val activity = requireActivity() as MainActivity
+            if (isUserSignedIn()) {
+                activity.showAccountBottomSheet()
+            } else {
+                activity.signInWithGoogle()
+            }
+        }
+
+
+
+
+        cardSettings.setOnClickListener {
+            startActivity(Intent(requireContext(), SettingsActivity::class.java))
+        }
+
+        cardAppInfo.setOnClickListener {
+            // Open App Guide Fragment
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, AppGuideFragment())
+                .addToBackStack(null)
+                .commit()
+        }
+
+        return view
+    }
+    override fun onResume() {
+        super.onResume()
+        updateSignInUI()
+    }
+
+
+    private fun updateSignInUI() {
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user != null) {
+            tvSignInStatus.text = "Signed in as"
+            tvUserEmail.text = user.email ?: "No email"
+        } else {
+            tvSignInStatus.text = "Sign in with Google"
+            tvUserEmail.text = "Backup your trips to the cloud"
+        }
+    }
+
+    private fun isUserSignedIn(): Boolean {
+        return FirebaseAuth.getInstance().currentUser != null
+    }
+}
 class AppGuideFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_app_guide, container, false)
-        view.findViewById<Button>(R.id.btnCloseGuide).setOnClickListener {
-            parentFragmentManager.popBackStack()
-        }
+//        view.findViewById<Button>(R.id.btnCloseGuide).setOnClickListener {
+//            parentFragmentManager.popBackStack()
+//        }
         return view
     }
 }

@@ -16,6 +16,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.util.TypedValue
 import com.google.android.material.card.MaterialCardView
 
 
@@ -55,7 +56,14 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
                 card.setCardBackgroundColor(Color.parseColor("#4D1F1F")) // Dark red tint
                 itemView.findViewById<View>(R.id.sosIndicator)?.visibility = View.VISIBLE
             } else {
-                card.setCardBackgroundColor(ContextCompat.getColor(itemView.context, R.color.background_card))
+                // Use theme attribute instead of hardcoded color for light/dark mode support
+                val typedValue = android.util.TypedValue()
+                itemView.context.theme.resolveAttribute(
+                    com.google.android.material.R.attr.colorSurfaceVariant,
+                    typedValue,
+                    true
+                )
+                card.setCardBackgroundColor(typedValue.data)
                 itemView.findViewById<View>(R.id.sosIndicator)?.visibility = View.GONE
             }
 

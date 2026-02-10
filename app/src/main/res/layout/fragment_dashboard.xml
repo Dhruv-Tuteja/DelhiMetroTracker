@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="false"
-        android:background="@color/background_primary">
+        android:background="?attr/colorSurface">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -19,6 +19,7 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- Header -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -34,7 +35,7 @@
                     android:text="Travel Dashboard"
                     android:textSize="32sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <ImageButton
                     android:id="@+id/btnCloseDashboard"
@@ -45,31 +46,33 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_close"
                     android:contentDescription="Close Dashboard"
-                    app:tint="@color/text_primary" />
-
+                    app:tint="?attr/colorOnSurface" />
             </RelativeLayout>
 
+            <!-- Stats Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardStats"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardElevation="4dp"
                 app:cardCornerRadius="16dp"
-                app:cardBackgroundColor="@color/background_card"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 android:layout_marginBottom="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="10dp">
 
+                    <!-- Top Stats Row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:weightSum="2">
 
+                        <!-- Total Trips -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -81,18 +84,19 @@
                                 android:layout_height="wrap_content"
                                 android:text="Total Trips"
                                 android:textSize="12sp"
-                                android:textColor="@color/text_secondary" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
                             <TextView
                                 android:id="@+id/tvTotalTrips"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textSize="28sp"
+                                android:textSize="22sp"
                                 android:textStyle="bold"
-                                android:textColor="@color/text_primary"
+                                android:textColor="?attr/colorOnSurface"
                                 android:layout_marginTop="4dp" />
                         </LinearLayout>
 
+                        <!-- Time in Transit -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -104,31 +108,34 @@
                                 android:layout_height="wrap_content"
                                 android:text="Time in Transit"
                                 android:textSize="12sp"
-                                android:textColor="@color/text_secondary" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
                             <TextView
                                 android:id="@+id/tvTotalTime"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0h 0m"
-                                android:textSize="28sp"
+                                android:textSize="22sp"
                                 android:textStyle="bold"
-                                android:textColor="@color/text_primary"
+                                android:textColor="?attr/colorOnSurface"
                                 android:layout_marginTop="4dp" />
                         </LinearLayout>
                     </LinearLayout>
 
+                    <!-- Divider -->
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:background="@color/card_stroke"
-                        android:layout_marginVertical="12dp" />
+                        android:background="?attr/colorOutlineVariant"
+                        android:layout_marginVertical="2dp" />
 
+                    <!-- Bottom Stats Row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:weightSum="2">
 
+                        <!-- Carbon Saved -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -140,18 +147,19 @@
                                 android:layout_height="wrap_content"
                                 android:text="🌱 Carbon Saved"
                                 android:textSize="12sp"
-                                android:textColor="@color/text_secondary" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
                             <TextView
                                 android:id="@+id/tvCarbonSaved"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0 kg CO₂"
-                                android:textSize="16sp"
+                                android:textSize="22sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/success_color"
                                 android:layout_marginTop="4dp" />
                         </LinearLayout>
 
+                        <!-- Stations Explored -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -163,29 +171,30 @@
                                 android:layout_height="wrap_content"
                                 android:text="🗺️ Stations Explored"
                                 android:textSize="12sp"
-                                android:textColor="@color/text_secondary" />
+                                android:textColor="?attr/colorOnSurfaceVariant" />
                             <TextView
                                 android:id="@+id/tvStationsVisited"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0 / 250"
-                                android:textSize="16sp"
+                                android:textSize="22sp"
                                 android:textStyle="bold"
-                                android:textColor="@color/text_primary"
+                                android:textColor="?attr/colorOnSurface"
                                 android:layout_marginTop="4dp" />
-                            <com.google.android.material.progressindicator.LinearProgressIndicator
-                                android:id="@+id/progressStations"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                app:indicatorColor="@color/accent_blue"
-                                app:trackColor="@color/progress_track"
-                                app:trackCornerRadius="4dp" />
+<!--                            <com.google.android.material.progressindicator.LinearProgressIndicator-->
+<!--                                android:id="@+id/progressStations"-->
+<!--                                android:layout_width="match_parent"-->
+<!--                                android:layout_height="wrap_content"-->
+<!--                                android:layout_marginTop="8dp"-->
+<!--                                app:indicatorColor="?attr/colorPrimary"-->
+<!--                                app:trackColor="?attr/colorSurfaceContainer"-->
+<!--                                app:trackCornerRadius="4dp" />-->
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Frequent Route Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardFrequentRoute"
                 android:layout_width="match_parent"
@@ -193,21 +202,23 @@
                 app:cardElevation="4dp"
                 app:cardCornerRadius="16dp"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#1E2849"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 android:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="10dp">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🔥 Your Favorite Route"
+                        android:text=" Your Favorite Route"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
+
                     <TextView
                         android:id="@+id/tvFrequentRoute"
                         android:layout_width="wrap_content"
@@ -215,21 +226,24 @@
                         android:text="Dwarka Sec-21 → Rajiv Chowk"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@color/text_primary"
+                        android:textColor="?attr/colorOnSurface"
                         android:layout_marginTop="8dp" />
+
                     <TextView
                         android:id="@+id/tvFrequentPattern"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Usually on Monday morning • 12 trips"
                         android:textSize="12sp"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:layout_marginTop="4dp" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:layout_marginTop="12dp">
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnQuickStart"
                             android:layout_width="0dp"
@@ -237,7 +251,8 @@
                             android:layout_weight="1"
                             android:text="Quick Start"
                             android:layout_marginEnd="8dp"
-                            app:backgroundTint="@color/accent_blue" />
+                            app:backgroundTint="?attr/colorPrimary" />
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnReturnJourney"
                             android:layout_width="0dp"
@@ -245,21 +260,23 @@
                             android:layout_weight="1"
                             android:text="Return Trip"
                             style="@style/Widget.Material3.Button.OutlinedButton"
-                            app:strokeColor="@color/accent_blue"
-                            android:textColor="@color/text_primary" />
+                            app:strokeColor="?attr/colorPrimary"
+                            android:textColor="?attr/colorOnSurface" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Section Title -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Recent Journeys"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp" />
+                android:textColor="?attr/colorOnSurface"
+                android:layout_marginBottom="8dp" />
 
+            <!-- Loading Indicator -->
             <ProgressBar
                 android:id="@+id/progressLoading"
                 android:layout_width="wrap_content"
@@ -268,6 +285,7 @@
                 android:layout_marginTop="32dp"
                 android:visibility="gone" />
 
+            <!-- Tab Indicator -->
             <LinearLayout
                 android:id="@+id/tabIndicator"
                 android:layout_width="match_parent"
@@ -288,9 +306,9 @@
                     android:text="Trip History"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="#6200EE"
+                    android:textColor="?attr/colorPrimary"
                     android:gravity="center"
-                    android:padding="12dp" />
+                    android:padding="2dp" />
 
                 <TextView
                     android:id="@+id/tvTabScheduled"
@@ -299,12 +317,12 @@
                     android:layout_weight="1"
                     android:text="Scheduled"
                     android:textSize="16sp"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:gravity="center"
-                    android:padding="12dp" />
+                    android:padding="2dp" />
             </LinearLayout>
 
-            <!-- ViewPager2 for swipe -->
+            <!-- ViewPager2 -->
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/viewPager"
                 android:layout_width="match_parent"
@@ -314,8 +332,6 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
-
-
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

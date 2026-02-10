@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="@drawable/dialog_background1">
+    android:background="?attr/colorSurface">
 
     <!-- Header with Share Button -->
     <LinearLayout
@@ -23,7 +23,7 @@
             android:text="Trip Details"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@color/text_primary" />
+            android:textColor="?attr/colorOnSurface" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnShareDialog"
@@ -41,7 +41,7 @@
         android:layout_marginBottom="16dp"
         app:cardCornerRadius="12dp"
         app:cardElevation="2dp"
-        app:cardBackgroundColor="@color/background_card">
+        app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -56,7 +56,7 @@
                 android:text="Rajiv Chowk → Kashmere Gate"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                android:textColor="?attr/colorOnSurface" />
 
             <TextView
                 android:id="@+id/tvDialogDateTime"
@@ -65,7 +65,7 @@
                 android:text="Jan 28, 2025 • 10:30 AM"
                 android:textSize="14sp"
                 android:layout_marginTop="4dp"
-                android:textColor="@color/text_secondary" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -80,7 +80,7 @@
                     android:layout_weight="1"
                     android:text="Duration: 25 mins"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <TextView
                     android:id="@+id/tvDialogStations"
@@ -89,7 +89,7 @@
                     android:layout_weight="1"
                     android:text="8 stations"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -101,7 +101,7 @@
         android:text="Journey Path"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:textColor="@color/text_primary"
+        android:textColor="?attr/colorOnSurface"
         android:paddingBottom="8dp" />
 
     <!-- Scrollable Station List -->
@@ -110,7 +110,5 @@
         android:layout_width="match_parent"
         android:layout_height="300dp"
         android:scrollbars="vertical" />
-
-    <!-- Close Button -->
 
 </LinearLayout>

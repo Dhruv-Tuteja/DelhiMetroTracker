@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#2C2C2C">
+    android:background="?attr/colorSurface">
 
     <!-- Custom Title Header -->
     <TextView
@@ -12,11 +12,11 @@
         android:layout_height="wrap_content"
         android:text="Manual Station Update"
         android:textSize="20sp"
-        android:textColor="#FFFFFF"
+        android:textColor="?attr/colorOnSurface"
         android:textStyle="bold"
         android:gravity="center"
         android:padding="20dp"
-        android:background="#2C2C2C"/>
+        android:background="?attr/colorSurfaceVariant"/>
 
     <!-- Content Container -->
     <LinearLayout
@@ -24,72 +24,131 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="20dp"
-        android:background="@drawable/dialog_background">
+        android:background="?attr/colorSurface">
 
         <!-- Station Selection -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/which_station_reached"
-            android:textSize="13sp"
-            android:textColor="#B0B0B0"
-            android:layout_marginBottom="8dp"/>
-
-        <Spinner
-            android:id="@+id/spinnerStation"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/spinner_background"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:layout_marginBottom="16dp"
-            android:contentDescription="@string/station_spinner_description"/>
-
-        <!-- Time Selection -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/when_arrived"
-            android:textSize="13sp"
-            android:textColor="#B0B0B0"
-            android:layout_marginBottom="8dp"/>
-
-        <Spinner
-            android:id="@+id/spinnerTime"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="@drawable/spinner_background"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:layout_marginBottom="16dp"
-            android:contentDescription="@string/time_spinner_description"/>
-
-        <!-- Info Message -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="12dp"
-            android:background="@drawable/info_background"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
 
             <ImageView
                 android:layout_width="18dp"
                 android:layout_height="18dp"
-                android:src="@android:drawable/ic_dialog_info"
-                app:tint="#64B5F6"
-                android:layout_marginEnd="8dp"
-                android:contentDescription="@string/info_icon"/>
+                android:src="@android:drawable/ic_menu_mylocation"
+                app:tint="?attr/colorPrimary"
+                android:layout_marginEnd="8dp"/>
 
             <TextView
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/manual_update_info"
-                android:textSize="11sp"
-                android:textColor="#90A4AE"
-                android:lineSpacingExtra="2dp"/>
+                android:text="@string/which_station_reached"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurfaceVariant"/>
         </LinearLayout>
+
+        <!-- Station Spinner Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp">
+
+            <Spinner
+                android:id="@+id/spinnerStation"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@android:color/transparent"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:popupBackground="?attr/colorSurfaceVariant"
+                android:contentDescription="@string/station_spinner_description"/>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Time Selection -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@android:drawable/ic_menu_recent_history"
+                app:tint="?attr/colorPrimary"
+                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/when_arrived"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurfaceVariant"/>
+        </LinearLayout>
+
+        <!-- Time Spinner Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp">
+
+            <Spinner
+                android:id="@+id/spinnerTime"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@android:color/transparent"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:popupBackground="?attr/colorSurfaceVariant"
+                android:contentDescription="@string/time_spinner_description"/>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Info Message -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_dialog_info"
+                    app:tint="?attr/colorPrimary"
+                    android:layout_marginEnd="12dp"
+                    android:contentDescription="@string/info_icon"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/manual_update_info"
+                    android:textSize="12sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:lineSpacingExtra="2dp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 
@@ -99,7 +158,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        android:background="#2C2C2C">
+        android:background="?attr/colorSurface">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCancelDialog"
@@ -108,10 +167,11 @@
             android:layout_height="56dp"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:text="Cancel"
-            android:textColor="#FFFFFF"
+            android:text="CANCEL"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="15sp"
-            app:strokeColor="#64B5F6"
+            android:textStyle="bold"
+            app:strokeColor="?attr/colorPrimary"
             app:cornerRadius="12dp"/>
 
         <com.google.android.material.button.MaterialButton
@@ -121,9 +181,10 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:text="UPDATE"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/colorOnPrimary"
             android:textSize="15sp"
-            app:backgroundTint="#64B5F6"
+            android:textStyle="bold"
+            app:backgroundTint="?attr/colorPrimary"
             app:cornerRadius="12dp"/>
     </LinearLayout>
 

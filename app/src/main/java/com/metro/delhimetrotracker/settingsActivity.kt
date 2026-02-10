@@ -173,15 +173,6 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        val switchWifiOnly = findViewById<SwitchMaterial>(R.id.switchWifiOnly)
-        switchWifiOnly.isChecked = getSharedPreferences("settings", MODE_PRIVATE)
-            .getBoolean("wifi_only_sync", false)
-        switchWifiOnly.setOnCheckedChangeListener { _, isChecked ->
-            getSharedPreferences("settings", MODE_PRIVATE).edit {
-                putBoolean("wifi_only_sync", isChecked)
-            }
-        }
-
         // ===== AUTO DELETE OLD TRIPS =====
         val cardAutoDelete = findViewById<MaterialCardView>(R.id.cardAutoDelete)
         cardAutoDelete.setOnClickListener {

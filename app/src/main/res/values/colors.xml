@@ -3,6 +3,8 @@
     <!-- Primary Brand Colors -->
     <color name="metro_blue">#1976D2</color>
     <color name="metro_dark_blue">#004BA0</color>
+    <color name="metro_light_blue">#64B5F6</color>
+
     <color name="metro_red">#D32F2F</color>
     <color name="metro_yellow">#FBC02D</color>
     <color name="metro_green">#388E3C</color>
@@ -92,4 +94,13 @@
     <color name="switch_track_on">#55FF5252</color> <!-- red with opacity -->
     <color name="switch_track_off">#37474F</color>
 
+    <!-- Accent / Semantic Colors -->
+    <color name="accent_green">#4CAF50</color>     <!-- Success / Confirm -->
+    <color name="accent_warning">#FF9800</color>   <!-- Warning / Attention -->
+
+    <color name="sos_background_light">#4D1F1F</color>
+    <color name="sos_background_dark">#662222</color>
+
+    <color name="delay_badge_light">#D32F2F</color>
+    <color name="delay_badge_dark">#EF5350</color>
 </resources>

@@ -323,8 +323,7 @@ class JourneyTrackingService : LifecycleService() {
                 lastLatitude = currentLocation.latitude
                 lastLongitude = currentLocation.longitude
 
-
-                // 🔹 1. Build candidate stations (max 4)
+                // 1️⃣ Build candidate stations (max 4 ahead)
                 val candidates = stationRoute
                     .drop(currentStationIndex)
                     .take(4)
@@ -334,7 +333,6 @@ class JourneyTrackingService : LifecycleService() {
                 var bestIndex = -1
                 var bestDistance = Float.MAX_VALUE
 
-                // 🔹 2. Check distance for each candidate
                 candidates.forEachIndexed { offset, station ->
                     val result = FloatArray(1)
                     Location.distanceBetween(
@@ -346,7 +344,6 @@ class JourneyTrackingService : LifecycleService() {
                     )
 
                     val distance = result[0]
-
                     if (distance <= 200f && distance < bestDistance) {
                         bestMatch = station
                         bestIndex = currentStationIndex + offset
@@ -354,32 +351,23 @@ class JourneyTrackingService : LifecycleService() {
                     }
                 }
 
-                // 🔹 3. No station detected → exit
                 if (bestMatch == null || bestIndex < currentStationIndex) return@launch
 
                 val trip = currentTrip ?: return@launch
 
-                Log.d(
-                    TAG,
-                    "STATION DETECTED: ${bestMatch!!.stationName} at index $bestIndex (distance=${bestDistance}m)"
-                )
-
-                // 🔹 4. Build updated visited stations
+                // 2️⃣ Update visited stations
                 val newVisited = stationRoute
                     .subList(0, bestIndex + 1)
                     .map { it.stationId }
 
-                val json = JSONArray(newVisited).toString()
-
-                database.tripDao().updateVisitedStations(trip.id, json)
+                database.tripDao().updateVisitedStations(trip.id, JSONArray(newVisited).toString())
                 database.tripDao().updateSyncStatus(trip.id, "PENDING", System.currentTimeMillis())
 
                 currentTrip = trip.copy(visitedStations = newVisited)
 
-                // 🔹 5. Insert checkpoints for skipped stations
+                // 3️⃣ Insert checkpoints
                 for (i in currentStationIndex..bestIndex) {
                     val station = stationRoute[i]
-
                     val checkpoint = StationCheckpoint(
                         tripId = trip.id,
                         stationId = station.stationId,
@@ -391,22 +379,55 @@ class JourneyTrackingService : LifecycleService() {
                         latitude = currentLocation.latitude,
                         longitude = currentLocation.longitude
                     )
-
                     database.stationCheckpointDao().insertCheckpoint(checkpoint)
-
-                    Log.d(TAG, "Checkpoint saved → ${station.stationName}")
                 }
 
                 currentStationIndex = bestIndex + 1
-                lastDetectedStationId = bestMatch!!.stationId
+                lastDetectedStationId = bestMatch.stationId
                 lastStationDetectionTime = System.currentTimeMillis()
 
-                withContext(Dispatchers.Main) {
-                    updateNotification("Current: ${bestMatch!!.stationName}")
+                // 4️⃣ Prepare SMS details
+                val reachedStation = bestMatch.stationName
+                val upcomingStation =
+                    stationRoute.getOrNull(currentStationIndex)?.stationName ?: "Destination"
+
+                val stationsLeft = (stationRoute.size - currentStationIndex).coerceAtLeast(0)
+
+                val batteryIntent = registerReceiver(
+                    null,
+                    IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+                )
+                val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+                val batteryPercent =
+                    if (level >= 0 && scale > 0) (level * 100 / scale) else -1
+
+                val batteryText =
+                    if (batteryPercent >= 0) "$batteryPercent%" else "Unknown"
+
+                val smsMessage = """
+🚉 Metro Update
+
+Reached: $reachedStation
+Next: $upcomingStation
+Stations left: $stationsLeft
+Battery: $batteryText
+
+- Delhi Metro Tracker
+            """.trimIndent()
+
+                // 5️⃣ Send SMS (if enabled)
+                if (trip.emergencyContact.isNotEmpty() && isSmsEnabled()) {
+                    smsHelper.sendSms(trip.emergencyContact, smsMessage)
                 }
 
-                // 🔹 6. End journey if destination reached
-                if (bestMatch!!.stationId == trip.destinationStationId) {
+                // 6️⃣ Update notification
+                withContext(Dispatchers.Main) {
+                    updateNotification("Current: $reachedStation")
+                }
+
+                // 7️⃣ End journey if destination reached
+                if (bestMatch.stationId == trip.destinationStationId) {
                     delay(1500)
                     stopJourneyTracking()
                 }
@@ -416,6 +437,7 @@ class JourneyTrackingService : LifecycleService() {
             }
         }
     }
+
 
 
     private fun startLocationUpdates() {
@@ -845,93 +867,131 @@ Trip tracking has been terminated. Please contact the traveler immediately.
         val emergencyContact = trip.emergencyContact
 
         if (emergencyContact.isEmpty()) {
-            Log.e(TAG, "Cannot trigger auto-SOS: No emergency contact set")
+            Log.e(TAG, "Auto-SOS failed: No emergency contact")
             return
         }
 
-        Log.e(TAG, "🆘 AUTO-SOS TRIGGERED - Sending emergency alert")
+        Log.e(TAG, "🆘 AUTO-SOS TRIGGERED")
 
-        // Get current station info
-        val currentStation = if (currentStationIndex > 0 && currentStationIndex <= stationRoute.size) {
+        // Determine current station
+        val currentStationName = if (
+            currentStationIndex > 0 &&
+            currentStationIndex <= stationRoute.size
+        ) {
             stationRoute[currentStationIndex - 1].stationName
         } else {
-            "Unknown Location"
+            "Unknown Station"
         }
+
         val locationString = if (lastLatitude != null && lastLongitude != null) {
             "https://maps.google.com/?q=$lastLatitude,$lastLongitude"
         } else {
             "Location unavailable"
         }
 
-        // Send emergency SMS
-        val sosMessage = """
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // ===============================
+                // 🔴 STEP 1: MARK SOS IN DATABASE
+                // ===============================
+                database.tripDao().markTripWithSos(
+                    tripId = trip.id,
+                    stationName = currentStationName,
+                    timestamp = System.currentTimeMillis()
+                )
+
+                Log.d(TAG, "✅ Auto-SOS marked in trip history")
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to mark Auto-SOS in DB", e)
+            }
+
+            // ===============================
+            // 🔴 STEP 2: SMS + CALL (MAIN THREAD)
+            // ===============================
+            withContext(Dispatchers.Main) {
+
+                val sosMessage = """
 🆘 AUTO-SOS ALERT
 
 Trip: ${trip.sourceStationName} → ${trip.destinationStationName}
-Last Known Station: $currentStation
+Last Known Station: $currentStationName
 Live Location:
 $locationString
 
 No station update for 15+ minutes.
 Please check immediately.
+
+- Delhi Metro Tracker
 """.trimIndent()
 
-
-        smsHelper.sendSms(emergencyContact, sosMessage)
-
-        // Make emergency call
-        try {
-            if (ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.CALL_PHONE
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                val callIntent = Intent(Intent.ACTION_CALL).apply {
-                    data = android.net.Uri.parse("tel:$emergencyContact")
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                // Send SMS
+                if (isSmsEnabled()) {
+                    try {
+                        smsHelper.sendSms(emergencyContact, sosMessage)
+                        Log.d(TAG, "✅ Auto-SOS SMS sent")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "❌ Auto-SOS SMS failed", e)
+                    }
                 }
-                startActivity(callIntent)
+
+                // Delay slightly to ensure SMS dispatch
+                delay(1500)
+
+                // Make Emergency Call (SAME AS MANUAL SOS)
+                try {
+                    if (ActivityCompat.checkSelfPermission(
+                            this@JourneyTrackingService,
+                            Manifest.permission.CALL_PHONE
+                        ) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        val callIntent = Intent(Intent.ACTION_CALL).apply {
+                            data = android.net.Uri.parse("tel:$emergencyContact")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        startActivity(callIntent)
+                        Log.d(TAG, "📞 Auto-SOS call initiated")
+                    } else {
+                        Log.e(TAG, "❌ CALL_PHONE permission missing")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Auto-SOS call failed", e)
+                }
+
+                // ===============================
+                // 🔴 STEP 3: UPDATE NOTIFICATION
+                // ===============================
+                updateNotification("🆘 AUTO-SOS SENT")
+
+                // ===============================
+                // 🔴 STEP 4: STRONG VIBRATION
+                // ===============================
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        vibrator.vibrate(
+                            VibrationEffect.createWaveform(
+                                longArrayOf(0, 500, 200, 500, 200, 500),
+                                -1
+                            )
+                        )
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator.vibrate(longArrayOf(0, 500, 200, 500, 200, 500), -1)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Vibration failed", e)
+                }
+
+                Toast.makeText(
+                    this@JourneyTrackingService,
+                    "🆘 Auto-SOS triggered. Emergency contact notified.",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                // Stop auto-SOS monitoring to prevent spam
+                stopAutoSosMonitoring()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to make emergency call", e)
         }
-
-        // Update notification
-        updateNotification("🆘 AUTO-SOS TRIGGERED - Emergency alert sent")
-
-        // Vibrate strongly
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(
-                    VibrationEffect.createWaveform(
-                        longArrayOf(0, 500, 200, 500, 200, 500),
-                        -1
-                    )
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(longArrayOf(0, 500, 200, 500, 200, 500), -1)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Vibration failed", e)
-        }
-
-        // Show notification to user
-        Toast.makeText(
-            this,
-            "🆘 Auto-SOS triggered - Emergency contact notified",
-            Toast.LENGTH_LONG
-        ).show()
-
-        // Open TrackingActivity so user can see what happened
-        val trackingIntent = Intent(this, TrackingActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("AUTO_SOS_TRIGGERED", true)
-            putExtra("EXTRA_TRIP_ID", trip.id)
-        }
-        startActivity(trackingIntent)
-
-        // Stop auto-SOS monitoring after triggering (don't spam)
-        stopAutoSosMonitoring()
     }
+
 }

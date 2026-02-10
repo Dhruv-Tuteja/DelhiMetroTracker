@@ -5,7 +5,6 @@ import android.animation.ArgbEvaluator
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.Activity
-// UPDATE THIS IMPORT:
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -45,7 +44,7 @@ import kotlinx.coroutines.tasks.await
 import android.view.KeyEvent
 import com.metro.delhimetrotracker.data.repository.RoutePlanner
 import kotlinx.coroutines.*
-import kotlinx.coroutines.tasks.await
+import com.google.android.material.color.MaterialColors
 import com.metro.delhimetrotracker.data.repository.MetroRepository
 import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
@@ -110,7 +109,7 @@ class TrackingActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        //enableEdgeToEdge()
         setContentView(R.layout.activity_tracking)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         //testGtfsRealtimeApi()
@@ -316,7 +315,13 @@ class TrackingActivity : AppCompatActivity() {
 
                                     findViewById<TextView>(R.id.tvNextTrainSchedule)?.apply {
                                         text = "Next Train: ${formatTime(nextTrain.arrival_time)}"
-                                        setTextColor(Color.parseColor("#4CAF50")) // Green
+                                        setTextColor(
+                                            MaterialColors.getColor(
+                                                this@TrackingActivity,
+                                                com.google.android.material.R.attr.colorPrimary,
+                                                Color.GREEN
+                                            )
+                                        )
                                         visibility = View.VISIBLE
                                     }
 
@@ -328,7 +333,13 @@ class TrackingActivity : AppCompatActivity() {
 
                                     findViewById<TextView>(R.id.tvNextTrainSchedule)?.apply {
                                         text = "No trains scheduled"
-                                        setTextColor(Color.parseColor("#FF5252")) // Red
+                                        setTextColor(
+                                            MaterialColors.getColor(
+                                                this@TrackingActivity,
+                                                com.google.android.material.R.attr.colorError,
+                                                Color.RED
+                                            )
+                                        )
                                         visibility = View.VISIBLE
                                     }
 
@@ -538,9 +549,17 @@ class TrackingActivity : AppCompatActivity() {
         overlay.visibility = View.VISIBLE
 
         // Flashing Red Animation (faster for urgency)
+        val errorColor = MaterialColors.getColor(
+            this,
+            com.google.android.material.R.attr.colorError,
+            Color.RED
+        )
+
         flashAnimator = ObjectAnimator.ofInt(
-            overlay, "backgroundColor",
-            Color.parseColor("#88FF0000"), Color.parseColor("#FFFF0000")
+            overlay,
+            "backgroundColor",
+            errorColor and 0x55FFFFFF,
+            errorColor
         ).apply {
             duration = 300
             setEvaluator(ArgbEvaluator())
@@ -548,6 +567,7 @@ class TrackingActivity : AppCompatActivity() {
             repeatMode = ValueAnimator.REVERSE
             start()
         }
+
 
         // Get vibrator
         val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator

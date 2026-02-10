@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0E27"
+    android:background="?attr/colorSurface"
     android:orientation="vertical"
     android:padding="24dp">
 
@@ -12,7 +12,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Welcome to Delhi Metro Tracker"
-        android:textColor="#FFFFFF"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="28sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp"/>
@@ -21,7 +21,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Your complete guide to safe and smart metro travel"
-        android:textColor="#8A94B8"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:textSize="14sp"
         android:layout_marginBottom="24dp"/>
 
@@ -47,10 +47,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#141B3A"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -62,7 +61,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="1️⃣  Getting Started"
-                        android:textColor="#64B5F6"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp"/>
@@ -71,7 +70,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Sign In with Google"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -79,8 +78,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="• Tap 'Sign in with Google' on the home screen\n• Your trip history, scheduled trips, and SOS alerts are automatically backed up to the cloud\n• Sign in on any device to access your data\n• You can use the app offline - data syncs when you're back online"
-                        android:textColor="#B0B8D4"
+                        android:text="• Tap 'Sign in with Google' in Account settings\n• Your trip history, scheduled trips, and SOS alerts are automatically backed up to the cloud\n• Sign in on any device to access your data\n• You can use the app offline - data syncs when you're back online"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"
                         android:layout_marginBottom="16dp"/>
@@ -89,7 +88,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Grant Permissions"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -98,7 +97,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="For full safety features, allow:\n• Location (for tracking your journey)\n• SMS (to notify emergency contacts)\n• Phone (for emergency calls)\n• Notifications (for trip reminders)\n\nDon't worry - your privacy is protected. We never share your data."
-                        android:textColor="#B0B8D4"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"/>
 
@@ -112,10 +111,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#141B3A"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -127,7 +125,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="2️⃣  Dashboard &amp; Navigation"
-                        android:textColor="#E1BEE7"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp"/>
@@ -136,7 +134,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Your Travel Stats"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -145,7 +143,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="The dashboard shows:\n• Total trips completed\n• Time spent in metro\n• Carbon emissions saved (by not using cars)\n• Stations explored\n• Your most frequent route"
-                        android:textColor="#B0B8D4"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"
                         android:layout_marginBottom="16dp"/>
@@ -153,8 +151,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Two Tabs"
-                        android:textColor="#FFFFFF"
+                        android:text="Bottom Navigation"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -162,26 +160,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="• Trip History: All your completed journeys\n• Scheduled Trips: Upcoming trips with reminders"
-                        android:textColor="#B0B8D4"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="4dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Quick Actions"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="6dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="• Swipe down: Sync your data with cloud\n• Swipe trip left/right: Delete (tap 'Undo' to restore)\n• Double-tap trip: Restart the same journey\n• Long-press trip: View detailed timeline and share"
-                        android:textColor="#B0B8D4"
+                        android:text="• Home - Start your journey\n• Trips - View history and stats\n• Account - Settings and preferences"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"/>
 
@@ -195,10 +175,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#141B3A"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -209,8 +188,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="3️⃣  Starting a Journey"
-                        android:textColor="#4CAF50"
+                        android:text="3️⃣  Starting a Trip"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp"/>
@@ -218,8 +197,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Step 1: Select Stations"
-                        android:textColor="#FFFFFF"
+                        android:text="Quick Start"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -227,8 +206,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="• Tap the 'Plan Journey' button\n• Choose your starting station\n• Choose your destination\n• See the route, estimated time, and fare"
-                        android:textColor="#B0B8D4"
+                        android:text="1. Tap 'Start Your Journey' on Home\n2. Select your starting and ending stations\n3. The app begins tracking automatically\n4. You'll see real-time updates as you travel"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"
                         android:layout_marginBottom="16dp"/>
@@ -236,8 +215,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Step 2: Add Emergency Contact (Optional)"
-                        android:textColor="#FFFFFF"
+                        android:text="Manual Updates"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -245,26 +224,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="• Enter a trusted contact's phone number (10 digits)\n• Or pick from contacts\n• They'll receive SMS updates as you travel\n• Critical for SOS emergencies"
-                        android:textColor="#B0B8D4"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="4dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Step 3: Start Tracking"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="6dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="• Tap 'Start Journey'\n• The app tracks your location in real-time\n• See a live timeline of stations\n• Updates automatically as you move\n• Manual station update available if GPS fails underground"
-                        android:textColor="#B0B8D4"
+                        android:text="If GPS isn't working underground:\n• Tap 'Update Station' button\n• Select your current station manually\n• The trip continues tracking normally"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"/>
 
@@ -272,16 +233,15 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- ============================================ -->
-            <!-- SECTION 4: SMS Auto-Updates -->
+            <!-- SECTION 4: SOS Features -->
             <!-- ============================================ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#141B3A"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -292,8 +252,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="4️⃣  SMS Auto-Updates"
-                        android:textColor="#9C27B0"
+                        android:text="🚨  SOS Safety Features"
+                        android:textColor="@color/accent_red"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp"/>
@@ -301,8 +261,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="How It Works"
-                        android:textColor="#FFFFFF"
+                        android:text="How SOS Works"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -310,8 +270,44 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="During your journey:\n• SMS sent when trip starts\n• SMS sent at every 3rd station\n• SMS sent when you arrive\n• Your emergency contact knows you're safe\n\nMessages include your current station and estimated arrival time."
-                        android:textColor="#B0B8D4"
+                        android:text="During an active trip:\n• Tap the SOS button OR\n• Press volume down 3 times quickly\n• 5-second countdown begins\n• SMS sent to emergency contact with your location\n• Double tap screen to cancel"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Auto-SOS (Optional)"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Enable in Settings:\n• If you don't end your trip within 15 minutes of reaching destination\n• Automatic SOS is sent\n• Great for emergencies or if you forget to end trip"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="14sp"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Set Emergency Contact"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Go to Settings → Emergency Contact\n• Add a trusted person's number\n• They'll receive alerts with your exact location\n• Change anytime"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"/>
 
@@ -319,17 +315,15 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- ============================================ -->
-            <!-- SECTION 5: SOS Emergency Alert -->
+            <!-- SECTION 5: Scheduled Trips -->
             <!-- ============================================ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#2D1414"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="#FF5252"
-                app:strokeWidth="2dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -340,8 +334,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🆘  Emergency SOS System"
-                        android:textColor="#FF5252"
+                        android:text="🕒  Scheduled Trips"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp"/>
@@ -349,8 +343,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="3 Ways to Trigger SOS"
-                        android:textColor="#FFFFFF"
+                        android:text="Plan Ahead"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -358,26 +352,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="1. Volume Down Button: Press rapidly 5 times (works even when phone is in pocket)\n\n2. Notification: Tap 'SOS' button in the tracking notification\n\n3. In-App: Press the red SOS button on tracking screen"
-                        android:textColor="#E0B0B0"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="4dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="What Happens"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="6dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="• Instant SMS to emergency contact with your exact location\n• Automatic emergency call placed\n• SOS alert saved to database and cloud\n• Trip marked with SOS flag in history\n• Contact receives: 'EMERGENCY! [Your Name] triggered SOS at [Station Name]'"
-                        android:textColor="#E0B0B0"
+                        android:text="• Schedule trips for future dates/times\n• Get notifications before departure\n• Quick-start scheduled trips\n• Perfect for daily commutes"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"/>
 
@@ -385,16 +361,15 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- ============================================ -->
-            <!-- SECTION 6: Scheduling Future Trips -->
+            <!-- SECTION 6: Trip History -->
             <!-- ============================================ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#141B3A"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -405,8 +380,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="5️⃣  Schedule Future Trips"
-                        android:textColor="#FFD700"
+                        android:text="📜  Trip History"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp"/>
@@ -414,8 +389,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="How to Schedule"
-                        android:textColor="#FFFFFF"
+                        android:text="View Past Trips"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -423,44 +398,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="• Tap 'Schedule Trip' from the menu\n• Select source and destination stations\n• Choose date and time\n• Set reminder (15 min, 30 min, or 1 hour before)\n• Choose: One-time or Recurring (daily/weekly)"
-                        android:textColor="#B0B8D4"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="4dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Notifications &amp; Auto-Delete"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="6dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="• Get a reminder notification at your set time\n• Notification shows next train timing\n• Tap notification to start the journey instantly\n• One-time trips auto-delete after reminder\n• Recurring trips repeat automatically"
-                        android:textColor="#B0B8D4"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="4dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Managing Scheduled Trips"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="6dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="• View in 'Scheduled' tab on dashboard\n• Swipe left/right to delete\n• Double-tap to start journey early\n• All changes sync to cloud automatically"
-                        android:textColor="#B0B8D4"
+                        android:text="• Swipe left to delete trips\n• Long-press to see detailed timeline\n• Tap to restart the same journey\n• All synced to cloud if signed in"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"/>
 
@@ -468,17 +407,15 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- ============================================ -->
-            <!-- SECTION 7: Critical Permissions -->
+            <!-- SECTION 7: Settings & Permissions -->
             <!-- ============================================ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#1F2937"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="#FF9800"
-                app:strokeWidth="2dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -489,8 +426,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="⚙️  Critical: Unrestricted Permissions"
-                        android:textColor="#FF9800"
+                        android:text="⚙️  Important Settings"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp"/>
@@ -498,8 +435,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Why This Matters"
-                        android:textColor="#FFFFFF"
+                        android:text="Battery Optimization"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -507,28 +444,10 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="For SOS to work even when your phone is locked or the app is in background, you must enable unrestricted background permissions.\n\nWithout this, emergency SMS and calls may not work when you need them most."
-                        android:textColor="#D4C5B9"
+                        android:text="For SOS to work reliably, disable battery optimization:\n\n1. Phone Settings → Apps → Delhi Metro Tracker\n2. Battery → Unrestricted\n3. Permissions → Location → Allow all the time"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
-                        android:lineSpacingExtra="4dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="How to Enable (Step-by-Step)"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="6dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="1. Open your phone's Settings app\n\n2. Go to Apps → Delhi Metro Tracker\n\n3. Tap 'Battery' or 'Battery Usage'\n\n4. Select 'Unrestricted' or 'No restrictions'\n\n5. Go back and tap 'Permissions'\n\n6. Ensure SMS, Phone, and Location are set to 'Allow all the time'\n\n7. Return to the app and test SOS"
-                        android:textColor="#D4C5B9"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="6dp"/>
+                        android:lineSpacingExtra="4dp"/>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -540,10 +459,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#141B3A"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -555,7 +473,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="🔒  Privacy &amp; Security"
-                        android:textColor="#00BCD4"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp"/>
@@ -564,7 +482,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Your Data is Safe"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -573,7 +491,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="• All data encrypted in transit and at rest\n• Only you can access your trip history\n• SMS only sent to contacts YOU choose\n• No data shared with third parties\n• No ads, no tracking, no selling your information"
-                        android:textColor="#B0B8D4"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"
                         android:layout_marginBottom="16dp"/>
@@ -582,7 +500,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Works Offline"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="6dp"/>
@@ -591,25 +509,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="• All trips saved locally first\n• App works without internet\n• Syncs automatically when online\n• Deleted trips archived in cloud (can be restored)\n• No data loss even if you uninstall"
-                        android:textColor="#B0B8D4"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="4dp"
-                        android:layout_marginBottom="16dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Sign Out Safely"
-                        android:textColor="#FFFFFF"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="6dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="• Tap menu → Sign Out\n• All pending data syncs before logging out\n• Local data remains until you clear app data\n• Sign back in anytime to restore everything"
-                        android:textColor="#B0B8D4"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="4dp"/>
 
@@ -623,10 +523,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="#141B3A"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -638,7 +537,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="💡  Pro Tips"
-                        android:textColor="#FFC107"
+                        android:textColor="?attr/colorPrimary"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp"/>
@@ -646,8 +545,8 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="• Keep location enabled for automatic station updates\n\n• Add emergency contact before every journey for maximum safety\n\n• Practice SOS volume button press when safe, so you know how it feels\n\n• Check scheduled trips tab for upcoming reminders\n\n• Use 'Manual Station Update' if underground GPS fails\n\n• Double-tap frequent routes from history for quick restart\n\n• Long-press trips to share your journey timeline with friends"
-                        android:textColor="#B0B8D4"
+                        android:text="• Keep location enabled for automatic station updates\n\n• Add emergency contact before every journey for maximum safety\n\n• Practice SOS volume button press when safe, so you know how it feels\n\n• Check scheduled trips tab for upcoming reminders\n\n• Use 'Manual Station Update' if underground GPS fails\n\n• Long-press trips to share your journey timeline with friends"
+                        android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="14sp"
                         android:lineSpacingExtra="6dp"/>
 
@@ -657,17 +556,17 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom Button - Unchanged as requested -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCloseGuide"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="32dp"
-        android:text="I Understand"
-        android:textAllCaps="false"
-        android:textStyle="bold"
-        app:cornerRadius="16dp"
-        app:backgroundTint="#64B5F6"/>
+<!--    &lt;!&ndash; Bottom Button &ndash;&gt;-->
+<!--    <com.google.android.material.button.MaterialButton-->
+<!--        android:id="@+id/btnCloseGuide"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="56dp"-->
+<!--        android:layout_marginTop="16dp"-->
+<!--        android:layout_marginBottom="32dp"-->
+<!--        android:text="I Understand"-->
+<!--        android:textAllCaps="false"-->
+<!--        android:textStyle="bold"-->
+<!--        app:cornerRadius="16dp"-->
+<!--        app:backgroundTint="?attr/colorPrimary"/>-->
 
 </LinearLayout>
