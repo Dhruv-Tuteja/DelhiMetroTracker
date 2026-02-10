@@ -117,7 +117,14 @@ class SyncWorker(
 
             val tripId = document.getLong("id") ?: continue
             val isDeleted = document.getBoolean("isDeleted") ?: false
-            if (isDeleted) continue
+
+            // ✅ FIX: If trip is deleted in cloud, delete it locally too
+            if (isDeleted) {
+                db.tripDao().markTripAsDeleted(tripId)
+                db.stationCheckpointDao().deleteCheckpointsByTrip(tripId)
+                android.util.Log.d("SYNC_DELETE", "Trip $tripId deleted from cloud, marked as deleted locally")
+                continue
+            }
 
             // 1️⃣ Parse checkpoints FIRST
             val checkpointsRaw =
@@ -181,26 +188,13 @@ class SyncWorker(
                 )
                 db.stationCheckpointDao().insertCheckpoint(checkpoint)
             }
-//            val gson = com.google.gson.Gson()
-//            // 4️⃣ 🔥 FORCE UPDATE visitedStations (THIS TRIGGERS FLOW)
-//            if (orderedStations.isNotEmpty()) {
-//                db.tripDao().updateVisitedStations(
-//                    tripId = tripId,
-//                    visitedListJson = gson.toJson(orderedStations), // ✅ JSON ARRAY
-//                    updateTime = System.currentTimeMillis()
-//                )
-//            }
 
-            android.util.Log.d(
+            Log.d(
                 "SYNC_REBUILD",
                 "Trip $tripId → stations=${orderedStations.size}, checkpoints=${checkpointsRaw.size}"
             )
         }
     }
-
-
-
-
     // ✅ UPDATED: Now accepts checkpoints parameter
     private fun tripToFirestoreMap(trip: Trip, checkpoints: List<Map<String, Any?>>): Map<String, Any?> {
         return hashMapOf(

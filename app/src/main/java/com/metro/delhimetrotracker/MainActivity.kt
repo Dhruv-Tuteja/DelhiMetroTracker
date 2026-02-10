@@ -181,11 +181,14 @@ class MainActivity : AppCompatActivity() {
         val appDb = (application as MetroTrackerApplication).database
 
         try {
+            // Format ID to 4 digits to match SyncWorker format (0001, 0002, etc.)
+            val formattedDocId = String.format(java.util.Locale.US, "%04d", tripId)
+
             // Upload tombstone to cloud
             db.collection("users")
                 .document(user.uid)
                 .collection("trips")
-                .document(tripId.toString())
+                .document(formattedDocId)  // ✅ Use formatted ID
                 .set(hashMapOf(
                     "id" to tripId,
                     "isDeleted" to true,
@@ -500,44 +503,7 @@ class MainActivity : AppCompatActivity() {
             val dest = intent.getStringExtra("PREFILL_DEST")
             showStationSelectionDialog(src, dest)
         }
-        //updateStartJourneyButton()
-
     }
-//    fun updateStartJourneyButton() {
-//        lifecycleScope.launch(Dispatchers.IO) {
-//            val db = (application as MetroTrackerApplication).database
-//            val activeTrip = db.tripDao().getActiveTrip()
-//
-//            withContext(Dispatchers.Main) {
-//                val btn = findViewById<MaterialButton>(R.id.btnStartJourney)
-//
-//                if (activeTrip != null) {
-//                    // ACTIVE TRIP EXISTS
-//                    btn.text = "Go to Active Trip"
-//                    btn.setOnClickListener {
-//                        val intent = Intent(this@MainActivity, TrackingActivity::class.java).apply {
-//                            putExtra("EXTRA_TRIP_ID", activeTrip.id)
-//                            putExtra("SOURCE_ID", activeTrip.sourceStationId)
-//                            putExtra("DEST_ID", activeTrip.destinationStationId)
-//                        }
-//                        startActivity(intent)
-//                    }
-//                } else {
-//                    // NO ACTIVE TRIP
-//                    btn.text = "Start Your Journey"
-//                    btn.setOnClickListener {
-//                        showStationSelectionDialog(null, null)
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    override fun onResume() {
-//        super.onResume()
-//        updateStartJourneyButton()
-//    }
-
-
     fun openStationSelector() {
         showStationSelectionDialog()
     }
@@ -581,10 +547,6 @@ class MainActivity : AppCompatActivity() {
         googleSignInClient = GoogleSignIn.getClient(this, gso)
     }
     private fun updateSignInButton() {
-//        val btnAccount = findViewById<MaterialCardView>(R.id.btnAccount)
-//        btnAccount?.let {
-//            // TODO: Update UI based on currentUser != null
-//        }
     }
     @SuppressLint("UnsafeIntentLaunch")
     private fun performSignOut() {
@@ -827,11 +789,6 @@ class MainActivity : AppCompatActivity() {
                 Log.e("Restore", "Failed to restore scheduled trips: ${e.message}")
             }
     }
-
-    private fun handleGoogleSignIn() {
-        // Just call the dialog function
-        showSignInDialog()
-    }
     private fun showSignInDialog() {
         // 1. Use BottomSheetDialog (It handles the slide & back button automatically)
         val dialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
@@ -954,18 +911,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun setupClickListeners() {
-//        findViewById<View>(R.id.btnStartJourney).setOnClickListener {
-//            showStationSelectionDialog()
-//        }
-//        findViewById<View>(R.id.btnAccount).setOnClickListener {
-//            handleGoogleSignIn()
-//        }
-//        findViewById<MaterialCardView>(R.id.btnAppInfo).setOnClickListener {
-//            openAppGuide()
-//        }
-//        findViewById<MaterialCardView>(R.id.btnViewDashboard)?.setOnClickListener {
-//            openDashboard()
-//        }
         findViewById<MaterialToolbar>(R.id.toolbar)?.apply {
             inflateMenu(R.menu.main_menu)
             setOnMenuItemClickListener { menuItem ->
@@ -979,33 +924,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    private fun openAppGuide() {
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(
-                R.anim.slide_in_left,
-                android.R.anim.fade_out,
-                android.R.anim.fade_in,
-                R.anim.slide_out_left
-            )
-            .replace(android.R.id.content, AppGuideFragment())
-            .addToBackStack(null)
-            .commit()
-    }
-    private fun openDashboard() {
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(
-                R.anim.slide_in_right,
-                R.anim.slide_out_left,
-                R.anim.slide_in_left,
-                R.anim.slide_out_right
-            )
-            .replace(android.R.id.content, com.metro.delhimetrotracker.ui.dashboard.DashboardFragment())
-            .addToBackStack(null)
-            .commit()
-    }
     // --- MAIN DIALOG FUNCTION ---
     fun showStationSelectionDialog(prefilledSource: String? = null, prefilledDest: String? = null) {
-        val prefs = getSharedPreferences("MetroPrefs", MODE_PRIVATE)
 
         val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         dialog.setContentView(R.layout.dialog_station_selector)
@@ -1016,12 +936,6 @@ class MainActivity : AppCompatActivity() {
         val destAtv = dialog.findViewById<AutoCompleteTextView>(R.id.destinationAutoComplete)
         val btnSwap = dialog.findViewById<MaterialButton>(R.id.btnSwapStations)
         val routePreferenceGroup = dialog.findViewById<RadioGroup>(R.id.routePreferenceGroup)
-
-        // SMS & Phone
-//        val cbSms = dialog.findViewById<MaterialCheckBox>(R.id.cbEnableSms)
-//        val layoutPhone = dialog.findViewById<LinearLayout>(R.id.layoutPhoneInput)
-//        val phoneEt = dialog.findViewById<TextInputEditText>(R.id.etPhoneNumber)
-//        val btnPickContact = dialog.findViewById<MaterialButton>(R.id.btnPickContact)
 
         // Schedule Logic
         val switchSchedule = dialog.findViewById<SwitchMaterial>(R.id.switchSchedule)
@@ -1038,8 +952,6 @@ class MainActivity : AppCompatActivity() {
         // --- 1. SETUP DEFAULTS ---
         prefilledSource?.let { sourceAtv.setText(it) }
         prefilledDest?.let { destAtv.setText(it) }
-        //currentDialogPhoneField = phoneEt
-        //phoneEt.setText(prefs.getString("last_phone", ""))
 
         // --- 2. LOAD STATIONS FOR AUTOCOMPLETE ---
         lifecycleScope.launch(Dispatchers.IO) {
@@ -1124,16 +1036,6 @@ class MainActivity : AppCompatActivity() {
                         }
                         // No active trip - proceed with validation and trip creation
                         withContext(Dispatchers.Main) {
-//                            var phone = ""
-//                            if (cbSms.isChecked) {
-//                                val rawPhone = phoneEt.text.toString().replace("\\s".toRegex(), "")
-//                                if (rawPhone.length != 10 || !rawPhone.all { it.isDigit() }) {
-//                                    Toast.makeText(this@MainActivity, "Enter valid 10-digit number!", Toast.LENGTH_SHORT).show()
-//                                    return@withContext
-//                                }
-//                                phone = rawPhone
-//                                prefs.edit { putString("last_phone", phone) }
-//                            }
 
                             val selectedPreference = when (routePreferenceGroup.checkedRadioButtonId) {
                                 R.id.rbLeastInterchanges -> RoutePlanner.RoutePreference.LEAST_INTERCHANGES
@@ -1180,10 +1082,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         // --- 5. OTHER LISTENERS ---
-//        cbSms.setOnCheckedChangeListener { _, isChecked ->
-//            layoutPhone.visibility = if (isChecked) View.VISIBLE else View.GONE
-//        }
-//        btnPickContact.setOnClickListener { contactPickerLauncher.launch(null) }
         toolbar.setNavigationOnClickListener { dialog.dismiss() }
         btnCancel.setOnClickListener { dialog.dismiss() }
 
@@ -1544,8 +1442,6 @@ class MainActivity : AppCompatActivity() {
 
         dialog.show()
     }
-
-
 }
 
 // ===== HOME FRAGMENT (embedded in MainActivity.kt) =====
@@ -1613,7 +1509,6 @@ class HomeFragment : Fragment() {
     }
 }
 
-
 // ===== ACCOUNT FRAGMENT (embedded in MainActivity.kt) =====
 class AccountFragment : Fragment() {
     private lateinit var cardSignIn: MaterialCardView
@@ -1644,10 +1539,6 @@ class AccountFragment : Fragment() {
                 activity.signInWithGoogle()
             }
         }
-
-
-
-
         cardSettings.setOnClickListener {
             startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
@@ -1686,9 +1577,6 @@ class AccountFragment : Fragment() {
 class AppGuideFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.fragment_app_guide, container, false)
-//        view.findViewById<Button>(R.id.btnCloseGuide).setOnClickListener {
-//            parentFragmentManager.popBackStack()
-//        }
         return view
     }
 }
