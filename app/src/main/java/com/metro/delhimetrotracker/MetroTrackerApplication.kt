@@ -39,21 +39,4 @@ class MetroTrackerApplication : Application() {
 
         Log.d(TAG, "Application initialized successfully")
     }
-    fun shouldAutoSync(context: Context): Boolean {
-        val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-
-        val autoSync = prefs.getBoolean("auto_sync", true)
-        if (!autoSync) return false
-
-        val wifiOnly = prefs.getBoolean("wifi_only_sync", false)
-        if (!wifiOnly) return true
-
-        // wifiOnly = true → check network
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(network) ?: return false
-
-        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-    }
-
 }

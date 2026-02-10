@@ -136,15 +136,22 @@ class MainActivity : AppCompatActivity() {
             // Soft delete the trip
             appDb.tripDao().markTripAsDeleted(tripId)
 
-            // IMMEDIATE SYNC: Upload to cloud right away if user is signed in
+            // CONDITIONAL SYNC: Only sync if auto-sync is enabled
+            val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+            val autoSync = prefs.getBoolean("auto_sync", true)
+
             val user = auth.currentUser
-            if (user != null) {
+            if (user != null && autoSync) {
                 try {
                     syncDeletedTripToCloud(tripId)
                     Log.d("Sync", "Trip $tripId marked as deleted and synced to cloud")
                 } catch (e: Exception) {
                     Log.e("Sync", "Failed to sync deleted trip: ${e.message}")
                 }
+            } else if (user != null && !autoSync) {
+                // Mark as pending for later sync
+                appDb.tripDao().updateSyncStatus(tripId, "PENDING")
+                Log.d("Sync", "Trip $tripId marked as deleted, sync pending (auto-sync disabled)")
             }
 
             withContext(Dispatchers.Main) {
@@ -174,7 +181,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ===== NEW: RESTORE DELETED TRIP WITH IMMEDIATE SYNC =====
+    // ===== NEW: RESTORE DELETED TRIP WITH CONDITIONAL SYNC =====
     fun restoreTrip(tripId: Long, onComplete: () -> Unit = {}) {
         lifecycleScope.launch(Dispatchers.IO) {
             val appDb = (application as MetroTrackerApplication).database
@@ -186,9 +193,12 @@ class MainActivity : AppCompatActivity() {
             val trip = appDb.tripDao().getTripByIdIncludingDeleted(tripId)
 
             if (trip != null) {
-                // IMMEDIATE SYNC: Upload restored trip to cloud
+                // CONDITIONAL SYNC: Only sync if auto-sync is enabled
+                val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+                val autoSync = prefs.getBoolean("auto_sync", true)
+
                 val user = auth.currentUser
-                if (user != null) {
+                if (user != null && autoSync) {
                     try {
                         syncRestoredTripToCloud(tripId)
                         Log.d("Sync", "Trip $tripId restored and synced to cloud")
@@ -203,6 +213,15 @@ class MainActivity : AppCompatActivity() {
                             Toast.makeText(this@MainActivity, "Restored locally, will sync later", Toast.LENGTH_SHORT).show()
                             onComplete()
                         }
+                    }
+                } else if (user != null && !autoSync) {
+                    // Mark as pending for later sync
+                    appDb.tripDao().updateSyncStatus(tripId, "PENDING")
+                    Log.d("Sync", "Trip $tripId restored, sync pending (auto-sync disabled)")
+
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, "Trip restored", Toast.LENGTH_SHORT).show()
+                        onComplete()
                     }
                 } else {
                     withContext(Dispatchers.Main) {
@@ -1542,6 +1561,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun uploadScheduledTripsToCloud() {
         val user = auth.currentUser ?: return
+
+        // Check if auto-sync is enabled
+        val prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        val autoSync = prefs.getBoolean("auto_sync", true)
+
+        if (!autoSync) {
+            Log.d("Sync", "Auto-sync disabled, scheduled trips will sync later")
+            return
+        }
+
         val db = FirebaseFirestore.getInstance()
 
         lifecycleScope.launch(Dispatchers.IO) {

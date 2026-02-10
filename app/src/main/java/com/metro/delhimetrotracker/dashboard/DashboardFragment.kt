@@ -98,21 +98,7 @@ class DashboardFragment : Fragment() {
 
     fun shouldAutoSync(context: Context): Boolean {
         val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-
-        // 1️⃣ Check Auto Sync toggle
-        val autoSync = prefs.getBoolean("auto_sync", true)
-        if (!autoSync) return false
-
-        // 2️⃣ Check Wi-Fi only toggle
-        val wifiOnly = prefs.getBoolean("wifi_only_sync", false)
-        if (!wifiOnly) return true   // Wi-Fi not required → allow sync
-
-        // 3️⃣ Wi-Fi required → check network
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(network) ?: return false
-
-        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        return prefs.getBoolean("auto_sync", true)
     }
     private fun initializeViews(view: View) {
         viewPager = view.findViewById(R.id.viewPager)
