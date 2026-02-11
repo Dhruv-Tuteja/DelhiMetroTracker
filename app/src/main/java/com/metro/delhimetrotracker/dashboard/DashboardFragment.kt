@@ -1,18 +1,15 @@
-package com.metro.delhimetrotracker.ui.dashboard
+package com.metro.delhimetrotracker.dashboard
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.AutoCompleteTextView
-import android.util.Log
 import android.widget.TextView
 import java.text.SimpleDateFormat
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
-import android.content.Context
 import com.metro.delhimetrotracker.MetroTrackerApplication
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -26,18 +23,16 @@ import com.metro.delhimetrotracker.data.repository.DashboardRepository
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import android.content.Intent
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import android.graphics.Typeface
 import java.util.Locale
 import android.widget.ImageView
 import java.util.Date
-import com.metro.delhimetrotracker.ui.MainActivity
+import com.metro.delhimetrotracker.MainActivity
 import com.metro.delhimetrotracker.data.model.TripCardData
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.button.MaterialButton
+import androidx.core.graphics.toColorInt
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
 
 class DashboardFragment : Fragment() {
@@ -45,7 +40,7 @@ class DashboardFragment : Fragment() {
     private lateinit var viewModel: DashboardViewModel
     private lateinit var viewPager: ViewPager2
 
-    private lateinit var swipeRefreshLayout: androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
 
 
     // UI References
@@ -60,6 +55,7 @@ class DashboardFragment : Fragment() {
     private lateinit var cardFrequentRoute: View
     private lateinit var tvFrequentRoute: TextView
     private lateinit var tvFrequentPattern: TextView
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -86,19 +82,8 @@ class DashboardFragment : Fragment() {
         setupViewPager()
         setupClickListeners(view)
 
-        // 4. Observe Data
+        // 4. Observe Data (this will use cached data if available)
         observeViewModel()
-
-        // Optional auto-sync when dashboard opens
-        if (shouldAutoSync(requireContext())) {
-            (activity as? MainActivity)?.performManualSync()
-        }
-
-    }
-
-    fun shouldAutoSync(context: Context): Boolean {
-        val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-        return prefs.getBoolean("auto_sync", true)
     }
     private fun initializeViews(view: View) {
         viewPager = view.findViewById(R.id.viewPager)
@@ -146,29 +131,25 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateTabStyles(position: Int) {
-        val activeColor = Color.parseColor("#6200EE") // Deep Purple
+        val activeColor = "#6200EE".toColorInt() // Deep Purple
         val inactiveColor = Color.GRAY
 
         if (position == 0) {
             tvTabHistory.setTextColor(activeColor)
-            tvTabHistory.setTypeface(null, android.graphics.Typeface.BOLD)
+            tvTabHistory.setTypeface(null, Typeface.BOLD)
 
             tvTabScheduled.setTextColor(inactiveColor)
-            tvTabScheduled.setTypeface(null, android.graphics.Typeface.NORMAL)
+            tvTabScheduled.setTypeface(null, Typeface.NORMAL)
         } else {
             tvTabScheduled.setTextColor(activeColor)
-            tvTabScheduled.setTypeface(null, android.graphics.Typeface.BOLD)
+            tvTabScheduled.setTypeface(null, Typeface.BOLD)
 
             tvTabHistory.setTextColor(inactiveColor)
-            tvTabHistory.setTypeface(null, android.graphics.Typeface.NORMAL)
+            tvTabHistory.setTypeface(null, Typeface.NORMAL)
         }
     }
 
     private fun setupClickListeners(view: View) {
-
-        view.findViewById<ImageView>(R.id.btnCloseDashboard)?.setOnClickListener {
-            parentFragmentManager.popBackStack()
-        }
 
         // Quick Start button - launches station selector with frequent route pre-filled
         view.findViewById<MaterialButton>(R.id.btnQuickStart)?.setOnClickListener {
@@ -230,6 +211,7 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateDashboardUI(state: DashboardUiState.Success) {
         // 1. Update Top Stats
         tvTotalTrips.text = state.stats.totalTrips.toString()
@@ -264,6 +246,7 @@ class DashboardFragment : Fragment() {
         showTripDetailsDialog(trip)
     }
 
+    @SuppressLint("SetTextI18n")
     private fun showTripDetailsDialog(trip: TripCardData) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_trip_details, null)
         val dialog = MaterialAlertDialogBuilder(requireContext())
@@ -438,9 +421,9 @@ class TimelineAdapter(private val items: List<TimelineItem>) :
         holder.viewLineBottom.visibility = if (position == items.size - 1) View.INVISIBLE else View.VISIBLE
 
         val color = try {
-            Color.parseColor(item.lineColor)
-        } catch (e: Exception) {
-            Color.parseColor("#607D8B")
+            item.lineColor.toColorInt()
+        } catch (_: Exception) {
+            "#607D8B".toColorInt()
         }
 
         holder.ivDot.setColorFilter(color)

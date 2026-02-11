@@ -1,10 +1,9 @@
-package com.metro.delhimetrotracker.receivers
+package com.metro.delhimetrotracker
 
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import com.metro.delhimetrotracker.data.local.database.entities.ScheduledTrip
 import java.util.Calendar
 
@@ -26,19 +25,11 @@ object ScheduledTripAlarmManager {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerTime,
-                pendingIntent
-            )
-        } else {
-            alarmManager.setExact(
-                AlarmManager.RTC_WAKEUP,
-                triggerTime,
-                pendingIntent
-            )
-        }
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            triggerTime,
+            pendingIntent
+        )
     }
 
     fun cancelTrip(context: Context, scheduledTripId: Long) {
@@ -54,15 +45,6 @@ object ScheduledTripAlarmManager {
 
         alarmManager.cancel(pendingIntent)
     }
-    fun  cancelTrip(context: Context, scheduledTrip: ScheduledTrip) {
-        cancelTrip(context, scheduledTrip.id)
-    }
-
-    fun scheduleNextOccurrence(context: Context, scheduledTrip: ScheduledTrip) {
-        if (!scheduledTrip.isRecurring) return
-        scheduleTrip(context, scheduledTrip)
-    }
-
     private fun calculateTriggerTime(scheduledTrip: ScheduledTrip): Long {
         val calendar = Calendar.getInstance()
 

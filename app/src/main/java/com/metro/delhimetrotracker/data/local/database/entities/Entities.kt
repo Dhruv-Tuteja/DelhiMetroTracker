@@ -231,21 +231,6 @@ data class ScheduledTrip(
  * Data class for syncing checkpoints to/from Firestore
  * This is NOT a Room entity - just a data transfer object
  */
-data class CheckpointData(
-    val stationId: String,
-    val stationName: String,
-    val stationOrder: Int,
-    val arrivalTime: Long,
-    val departureTime: Long? = null,
-    val detectionMethod: String,
-    val confidence: Float,
-    val smsSent: Boolean = false,
-    val smsTimestamp: Long? = null,
-    val latitude: Double? = null,
-    val longitude: Double? = null,
-    val accuracy: Float? = null,
-    val timestamp: Long? = null
-)
 
 @Parcelize
 data class RouteDivergence(

@@ -23,7 +23,7 @@ class GtfsLoader(private val context: Context, private val db: AppDatabase) {
             } else {
                 0
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Log.e("GTFS_TIME", "Failed to parse time: $t")
             0
         }

@@ -1,6 +1,5 @@
-package com.metro.delhimetrotracker.ui.dashboard
+package com.metro.delhimetrotracker.dashboard
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +10,7 @@ import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.graphics.toColorInt
 
 class TripTimelineAdapter(
     private val checkpoints: List<StationCheckpoint>,
@@ -46,7 +46,7 @@ class TripTimelineAdapter(
             val color = if (lineColors.isNotEmpty()) {
                 parseColor(lineColors[position % lineColors.size])
             } else {
-                Color.parseColor("#64B5F6")
+                "#64B5F6".toColorInt()
             }
 
             // Set colors
@@ -63,9 +63,9 @@ class TripTimelineAdapter(
 
         private fun parseColor(colorString: String): Int {
             return try {
-                Color.parseColor(colorString)
-            } catch (e: Exception) {
-                Color.parseColor("#64B5F6")
+                colorString.toColorInt()
+            } catch (_: Exception) {
+                "#64B5F6".toColorInt()
             }
         }
     }

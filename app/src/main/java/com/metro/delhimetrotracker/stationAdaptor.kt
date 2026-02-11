@@ -1,16 +1,20 @@
-package com.metro.delhimetrotracker.ui
+package com.metro.delhimetrotracker
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.res.Configuration
 import com.google.android.material.color.MaterialColors
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AnimationUtils
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.MetroStation
-import android.graphics.Color
+import androidx.core.graphics.toColorInt
 
 class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
 
@@ -19,12 +23,14 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
     private var visitedIds = listOf<String>()
     private var baseTimeForCalculation: String? = null
 
+    @SuppressLint("NotifyDataSetChanged")
     fun submitData(newStations: List<MetroStation>, visited: List<String>) {
         this.stations = newStations
         this.visitedIds = visited
         notifyDataSetChanged()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun updateBaseTime(time: String?) {
         this.baseTimeForCalculation = time
         notifyDataSetChanged()
@@ -35,6 +41,7 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
         return ViewHolder(view)
     }
 
+    @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val station = stations[position]
         holder.tvName.text = station.stationName
@@ -53,8 +60,8 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
 
         // Parse line color
         val lineColorInt = try {
-            android.graphics.Color.parseColor(station.lineColor)
-        } catch (e: Exception) {
+            station.lineColor.toColorInt()
+        } catch (_: Exception) {
             colorPrimary
         }
 
@@ -65,10 +72,10 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
         // CALCULATE BRIGHTER COLOR FOR VISITED LINES (much more visible in dark mode)
         val visitedLineColor = if (isDarkTheme(holder.itemView.context)) {
             // In dark mode: use a brighter gray that's clearly visible
-            Color.parseColor("#6B7BA8") // Light gray-blue
+            "#6B7BA8".toColorInt() // Light gray-blue
         } else {
             // In light mode: use medium gray
-            Color.parseColor("#9E9E9E") // Medium gray
+            "#9E9E9E".toColorInt() // Medium gray
         }
 
         // LINE COLORS - Much better visibility
@@ -93,9 +100,9 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
 
         // NODE DOT COLOR - Better visibility
         val visitedNodeColor = if (isDarkTheme(holder.itemView.context)) {
-            Color.parseColor("#8A94B8") // Lighter gray for dark mode
+            "#8A94B8".toColorInt() // Lighter gray for dark mode
         } else {
-            Color.parseColor("#757575") // Medium gray for light mode
+            "#757575".toColorInt() // Medium gray for light mode
         }
 
         holder.nodeDot.background = createCircleDrawable(
@@ -141,28 +148,28 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
 
                 // Status badge color
                 val statusTextColor = if (isDarkTheme(holder.itemView.context)) {
-                    Color.parseColor("#8A94B8") // Lighter in dark mode
+                    "#8A94B8".toColorInt() // Lighter in dark mode
                 } else {
-                    Color.parseColor("#757575") // Darker in light mode
+                    "#757575".toColorInt() // Darker in light mode
                 }
                 holder.tvStatus.setTextColor(statusTextColor)
                 holder.tvStatus.background = createBadgeDrawable(adjustAlpha(statusTextColor, 0.15f))
 
-                // CRITICAL FIX: Use contrasting background for visited cards
+                // Use contrasting background for visited cards
                 val visitedCardBg = if (isDarkTheme(holder.itemView.context)) {
                     // In dark mode: slightly lighter than surface
-                    Color.parseColor("#1E2337") // Lighter dark blue
+                    "#1E2337".toColorInt() // Lighter dark blue
                 } else {
                     // In light mode: white/surface color
                     colorSurface
                 }
                 holder.stationCard.setCardBackgroundColor(visitedCardBg)
 
-                // CRITICAL FIX: Visible border for visited cards
+                // Visible border for visited cards
                 val visitedBorderColor = if (isDarkTheme(holder.itemView.context)) {
-                    Color.parseColor("#3A4155") // Visible border in dark mode
+                    "#3A4155".toColorInt() // Visible border in dark mode
                 } else {
-                    Color.parseColor("#E0E0E0") // Light gray border in light mode
+                    "#E0E0E0".toColorInt() // Light gray border in light mode
                 }
                 holder.stationCard.strokeColor = visitedBorderColor
                 holder.stationCard.strokeWidth = 2
@@ -189,12 +196,13 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
     }
 
     // Helper to detect dark theme
-    private fun isDarkTheme(context: android.content.Context): Boolean {
+    private fun isDarkTheme(context: Context): Boolean {
         val nightModeFlags = context.resources.configuration.uiMode and
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK
-        return nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                Configuration.UI_MODE_NIGHT_MASK
+        return nightModeFlags == Configuration.UI_MODE_NIGHT_YES
     }
 
+    @SuppressLint("DefaultLocale")
     private fun addMinutesToTime(timeStr: String?, minutesToAdd: Int): String {
         if (timeStr.isNullOrEmpty()) return "--:--"
         return try {
@@ -216,7 +224,7 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
             if (displayHour == 0) displayHour = 12
 
             String.format("%d:%02d %s", displayHour, minutes, amPm)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             "--:--"
         }
     }
@@ -246,7 +254,7 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
 
     private fun setAnimation(viewToAnimate: View, position: Int) {
         if (position > lastPosition) {
-            val animation = android.view.animation.AnimationUtils.loadAnimation(
+            val animation = AnimationUtils.loadAnimation(
                 viewToAnimate.context,
                 R.anim.item_animation_fall_down
             )

@@ -1,17 +1,17 @@
-package com.metro.delhimetrotracker.ui
+package com.metro.delhimetrotracker
 
 import android.Manifest
 import android.animation.ArgbEvaluator
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
-import android.app.Activity
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.net.Uri
+import android.location.Location
 import android.os.*
 import android.telephony.SmsManager
 import android.view.View
@@ -21,7 +21,6 @@ import android.widget.FrameLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
@@ -34,7 +33,6 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.LinearProgressIndicator
-import com.metro.delhimetrotracker.MetroTrackerApplication
 import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.MetroStation
 import com.metro.delhimetrotracker.service.JourneyTrackingService
@@ -49,27 +47,27 @@ import com.metro.delhimetrotracker.data.repository.MetroRepository
 import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.Date
 import android.util.Log
 import java.util.Calendar
 import com.metro.delhimetrotracker.data.repository.GtfsLoader
-//import okhttp3.OkHttpClient
-//import okhttp3.Request
-//import com.google.transit.realtime.VehiclePosition
-//import com.google.transit.realtime.FeedMessage
+import androidx.core.net.toUri
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+//import com.metro.delhimetrotracker.data.repository.GtfsRealtimeRepository
+//import java.net.HttpURLConnection
+//import java.net.URL
 
+
+@Suppress("DEPRECATION")
 class TrackingActivity : AppCompatActivity() {
-
     private lateinit var adapter: StationAdapter
     private lateinit var progressIndicator: LinearProgressIndicator
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     // Speed tracking variables
-    private var locationCallback: com.google.android.gms.location.LocationCallback? = null
-    private var previousLocation: android.location.Location? = null
-
-    private var departureTime: Long = 0
-
+    private var locationCallback: LocationCallback? = null
+    private var previousLocation: Location? = null
 
     // Store journey data for manual update dialog
     private var currentJourneyPath: List<MetroStation> = emptyList()
@@ -87,9 +85,6 @@ class TrackingActivity : AppCompatActivity() {
 
     private var scheduleJob: Job? = null
     private lateinit var repository: MetroRepository
-    private var lastFallbackTime: String? = null
-
-
 
 
     override fun onNewIntent(intent: Intent) {
@@ -107,6 +102,7 @@ class TrackingActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         //enableEdgeToEdge()
@@ -153,7 +149,7 @@ class TrackingActivity : AppCompatActivity() {
         val preferenceString = intent.getStringExtra("ROUTE_PREFERENCE")
         routePreference = try {
             RoutePlanner.RoutePreference.valueOf(preferenceString ?: "SHORTEST_PATH")
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             RoutePlanner.RoutePreference.SHORTEST_PATH
         }
         val db = (application as MetroTrackerApplication).database
@@ -236,9 +232,9 @@ class TrackingActivity : AppCompatActivity() {
                         findViewById<TextView>(R.id.tvCurrentStationLabel).text =
                             "EST. TIME: $estTimeText"
 
-                        val progress = when {
-                            currentStationIndex == 0 -> 0f
-                            currentStationIndex == totalStations - 1 -> 100f
+                        val progress = when (currentStationIndex) {
+                            0 -> 0f
+                            totalStations - 1 -> 100f
                             else -> {
                                 val totalSegments = totalStations - 1
                                 (currentStationIndex.toFloat() / totalSegments.toFloat() * 100)
@@ -257,7 +253,6 @@ class TrackingActivity : AppCompatActivity() {
                             triggerTripleVibration()
                         }
                     }
-                    val testStation = repository.getStationById(activeTrip.sourceStationId)
                     // Add this in onCreate or before the schedule loop starts
                     lifecycleScope.launch(Dispatchers.IO) {
                         val station = repository.getStationById(activeTrip.sourceStationId)
@@ -287,9 +282,8 @@ class TrackingActivity : AppCompatActivity() {
 
                             // 3. Get next station for directional search
                             val nextStationIndex = activeTrip.visitedStations.size
-                            val allStationsInPath = journeyPath
-                            val nextStationInRoute = if (nextStationIndex < allStationsInPath.size) {
-                                allStationsInPath[nextStationIndex]
+                            val nextStationInRoute = if (nextStationIndex < journeyPath.size) {
+                                journeyPath[nextStationIndex]
                             } else null
 
                             // 4. Query next train (with direction if available)
@@ -355,6 +349,7 @@ class TrackingActivity : AppCompatActivity() {
             }
         }
     }
+    @SuppressLint("DefaultLocale")
     private fun formatSeconds(seconds: Int): String {
         val hours = (seconds / 3600) % 24
         val mins = (seconds % 3600) / 60
@@ -367,7 +362,7 @@ class TrackingActivity : AppCompatActivity() {
             val outputFormat = SimpleDateFormat("h:mm a", Locale.US)
             val date = inputFormat.parse(timeStr)
             outputFormat.format(date ?: return timeStr)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             timeStr // Return original if parsing fails
         }
     }
@@ -427,7 +422,7 @@ class TrackingActivity : AppCompatActivity() {
     private val smsResultReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (resultCode) {
-                Activity.RESULT_OK -> Toast.makeText(context, "✅ SMS Delivered", Toast.LENGTH_SHORT).show()
+                RESULT_OK -> Toast.makeText(context, "✅ SMS Delivered", Toast.LENGTH_SHORT).show()
                 else -> Toast.makeText(context, "❌ SMS Failed", Toast.LENGTH_SHORT).show()
             }
         }
@@ -445,6 +440,7 @@ class TrackingActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onStart() {
         super.onStart()
         val filterSms = IntentFilter("com.metro.delhimetrotracker.SMS_SENT")
@@ -485,7 +481,7 @@ class TrackingActivity : AppCompatActivity() {
             unregisterReceiver(smsResultReceiver)
             unregisterReceiver(resetReceiver)
             mockReceiver?.let { unregisterReceiver(it) }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Receiver not registered
         }
     }
@@ -574,6 +570,7 @@ class TrackingActivity : AppCompatActivity() {
 
         // 5-Second Countdown Timer with vibration every second
         sosTimer = object : CountDownTimer(5000, 1000) {
+            @SuppressLint("SetTextI18n")
             override fun onTick(millisUntilFinished: Long) {
                 val secondsLeft = (millisUntilFinished / 1000) + 1
                 tvCountdown.text = "🆘 SENDING SOS IN $secondsLeft"
@@ -603,13 +600,12 @@ class TrackingActivity : AppCompatActivity() {
         }.start()
 
         // Double Tap to Cancel
-        var lastClickTime: Long = 0
+        val lastClickTime: Long = 0
         overlay.setOnClickListener {
             val clickTime = System.currentTimeMillis()
             if (clickTime - lastClickTime < 300) {
                 cancelSos()
             }
-            lastClickTime = clickTime
         }
     }
 
@@ -633,9 +629,9 @@ class TrackingActivity : AppCompatActivity() {
                     stationName = stationName,
                     timestamp = System.currentTimeMillis()
                 )
-                android.util.Log.d("TrackingActivity", "✅ SOS marked in DB for Trip: $currentTripId")
+                Log.d("TrackingActivity", "✅ SOS marked in DB for Trip: $currentTripId")
             } catch (e: Exception) {
-                android.util.Log.e("TrackingActivity", "❌ Failed to mark SOS in DB", e)
+                Log.e("TrackingActivity", "❌ Failed to mark SOS in DB", e)
             }
 
             // ==============================================================
@@ -651,7 +647,7 @@ class TrackingActivity : AppCompatActivity() {
                 try {
                     // Get Location (Suspend function)
                     val location = if (ActivityCompat.checkSelfPermission(this@TrackingActivity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                        try { fusedLocationClient.lastLocation.await() } catch (e: Exception) { null }
+                        try { fusedLocationClient.lastLocation.await() } catch (_: Exception) { null }
                     } else null
 
                     val mapsLink = if (location != null) "https://maps.google.com/?q=${location.latitude},${location.longitude}" else "Location unavailable"
@@ -679,11 +675,11 @@ class TrackingActivity : AppCompatActivity() {
                     // Make Call (After 1.5s delay)
                     if (ActivityCompat.checkSelfPermission(this@TrackingActivity, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED && emergencyContact.isNotEmpty()) {
                         delay(1500)
-                        startActivity(Intent(Intent.ACTION_CALL, Uri.parse("tel:$emergencyContact")))
+                        startActivity(Intent(Intent.ACTION_CALL, "tel:$emergencyContact".toUri()))
                     }
 
                 } catch (e: Exception) {
-                    android.util.Log.e("TrackingActivity", "SMS/Call Failed", e)
+                    Log.e("TrackingActivity", "SMS/Call Failed", e)
                     Toast.makeText(this@TrackingActivity, "SMS failed: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -749,14 +745,14 @@ class TrackingActivity : AppCompatActivity() {
             return
         }
 
-        val locationRequest = com.google.android.gms.location.LocationRequest.create().apply {
+        val locationRequest = LocationRequest.create().apply {
             interval = 1000 // Update every second
             fastestInterval = 500
-            priority = com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
-        locationCallback = object : com.google.android.gms.location.LocationCallback() {
-            override fun onLocationResult(locationResult: com.google.android.gms.location.LocationResult) {
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->
                     val speedKmh = if (location.hasSpeed()) {
                         location.speed * 3.6f // Convert m/s to km/h
@@ -778,7 +774,7 @@ class TrackingActivity : AppCompatActivity() {
     /**
      * Calculate speed from distance between points
      */
-    private fun calculateSpeedFromDistance(currentLocation: android.location.Location): Float {
+    private fun calculateSpeedFromDistance(currentLocation: Location): Float {
         previousLocation?.let { previous ->
             val distance = previous.distanceTo(currentLocation)
             val timeDiff = (currentLocation.time - previous.time) / 1000f
@@ -789,124 +785,88 @@ class TrackingActivity : AppCompatActivity() {
         previousLocation = currentLocation
         return 0f
     }
-    private fun addMinutesToTime(timeStr: String?, minutesToAdd: Int): String {
-        if (timeStr.isNullOrEmpty()) return "--:--"
-
-        // 1. Split "08:10" into 8 and 10
-        val parts = timeStr.split(":")
-        if (parts.size < 2) return timeStr
-
-        var hours = parts[0].trim().toInt()
-        var minutes = parts[1].trim().toInt()
-
-        // 2. Add the 2 minutes
-        minutes += minutesToAdd
-
-        // 3. Handle overflow (e.g., 8:59 + 2 becomes 9:01)
-        if (minutes >= 60) {
-            hours += 1
-            minutes -= 60
-        }
-
-        // 4. Format back to "HH:mm"
-        return String.format("%02d:%02d", hours, minutes)
-    }
     /**
      * Update speed TextView
      */
+    @SuppressLint("DefaultLocale")
     private fun updateSpeedDisplay(speedKmh: Float) {
         findViewById<TextView>(R.id.tvSpeedValue)?.text = String.format("%.0f", speedKmh.coerceAtLeast(0f))
     }
 
-    // In TrackingActivity.kt
-
-    private fun isUserAtStation(station: MetroStation, userLocation: android.location.Location?): Boolean {
-        if (userLocation == null) return true // Assume at station if no GPS (safer fallback)
-
-        val results = FloatArray(1)
-        android.location.Location.distanceBetween(
-            userLocation.latitude, userLocation.longitude,
-            station.latitude, station.longitude,
-            results
-        )
-        // Return true if within 200 meters
-        return results[0] <= 200.0
-    }
-    // Place this in your TrackingActivity or create a test activity
-    private fun testGtfsRealtimeApi() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val urls = listOf(
-                    "https://otd.delhi.gov.in/api/realtime/VehiclePositions.pb?key=Ex9XdpVhKiJT426Q6ttKZx4E4aFkbGL2",
-                    "https://data.delhi.gov.in/api/realtime/VehiclePositions.pb?key=Ex9XdpVhKiJT426Q6ttKZx4E4aFkbGL2"
-                )
-
-                for (url in urls) {
-                    android.util.Log.d("GTFS_TEST", "Testing URL: $url")
-
-                    try {
-                        val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-                        connection.requestMethod = "GET"
-                        connection.connectTimeout = 10000
-                        connection.readTimeout = 10000
-
-                        val responseCode = connection.responseCode
-                        android.util.Log.d("GTFS_TEST", "Response Code: $responseCode")
-
-                        if (responseCode == 200) {
-                            val bytes = connection.inputStream.readBytes()
-                            android.util.Log.d("GTFS_TEST", "✅ SUCCESS! Received ${bytes.size} bytes")
-
-                            withContext(Dispatchers.Main) {
-                                android.widget.Toast.makeText(this@TrackingActivity, "API Works! ${bytes.size} bytes", android.widget.Toast.LENGTH_LONG).show()
-                            }
-                            break
-                        } else {
-                            val error = connection.errorStream?.bufferedReader()?.readText()
-                            android.util.Log.e("GTFS_TEST", "Failed: $error")
-                        }
-
-                        connection.disconnect()
-
-                    } catch (e: Exception) {
-                        android.util.Log.e("GTFS_TEST", "Error: ${e.message}", e)
-                    }
-                }
-
-            } catch (e: Exception) {
-                android.util.Log.e("GTFS_TEST", "Error: ${e.message}", e)
-            }
-        }
-    }
-    private fun testGtfsRealtimeParsing() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val repo = com.metro.delhimetrotracker.data.repository.GtfsRealtimeRepository()
-                val vehicles = repo.getVehiclePositions()
-
-                // SWITCH TO MAIN THREAD TO SHOW TOAST
-                withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(
-                        this@TrackingActivity,
-                        "Fetched: ${vehicles.size} vehicles",
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                }
-
-                Log.d("GTFS_REALTIME", "━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                Log.d("GTFS_REALTIME", "Total vehicles: ${vehicles.size}")
-
-                vehicles.take(3).forEach { vehicle ->
-                    Log.d("GTFS_REALTIME", "VRN: ${vehicle.vehicle?.label}") // VRN is usually in 'label' or 'license_plate'
-                    Log.d("GTFS_REALTIME", "Lat: ${vehicle.position?.latitude}")
-                    Log.d("GTFS_REALTIME", "Lng: ${vehicle.position?.longitude}")
-                    Log.d("GTFS_REALTIME", "-----------------------------")
-                }
-
-            } catch (e: Exception) {
-                Log.e("GTFS_REALTIME", "CRASH: ${e.message}")
-                e.printStackTrace()
-            }
-        }
-    }
+//    private fun testGtfsRealtimeApi() {
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            try {
+//                val urls = listOf(
+//                    "https://otd.delhi.gov.in/api/realtime/VehiclePositions.pb?key=Ex9XdpVhKiJT426Q6ttKZx4E4aFkbGL2",
+//                    "https://data.delhi.gov.in/api/realtime/VehiclePositions.pb?key=Ex9XdpVhKiJT426Q6ttKZx4E4aFkbGL2"
+//                )
+//
+//                for (url in urls) {
+//                    Log.d("GTFS_TEST", "Testing URL: $url")
+//
+//                    try {
+//                        val connection = URL(url).openConnection() as HttpURLConnection
+//                        connection.requestMethod = "GET"
+//                        connection.connectTimeout = 10000
+//                        connection.readTimeout = 10000
+//
+//                        val responseCode = connection.responseCode
+//                        Log.d("GTFS_TEST", "Response Code: $responseCode")
+//
+//                        if (responseCode == 200) {
+//                            val bytes = connection.inputStream.readBytes()
+//                            Log.d("GTFS_TEST", "✅ SUCCESS! Received ${bytes.size} bytes")
+//
+//                            withContext(Dispatchers.Main) {
+//                                Toast.makeText(this@TrackingActivity, "API Works! ${bytes.size} bytes", Toast.LENGTH_LONG).show()
+//                            }
+//                            break
+//                        } else {
+//                            val error = connection.errorStream?.bufferedReader()?.readText()
+//                            Log.e("GTFS_TEST", "Failed: $error")
+//                        }
+//
+//                        connection.disconnect()
+//
+//                    } catch (e: Exception) {
+//                        Log.e("GTFS_TEST", "Error: ${e.message}", e)
+//                    }
+//                }
+//
+//            } catch (e: Exception) {
+//                Log.e("GTFS_TEST", "Error: ${e.message}", e)
+//            }
+//        }
+//    }
+//    private fun testGtfsRealtimeParsing() {
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            try {
+//                val repo = GtfsRealtimeRepository()
+//                val vehicles = repo.getVehiclePositions()
+//
+//                // SWITCH TO MAIN THREAD TO SHOW TOAST
+//                withContext(Dispatchers.Main) {
+//                    Toast.makeText(
+//                        this@TrackingActivity,
+//                        "Fetched: ${vehicles.size} vehicles",
+//                        Toast.LENGTH_LONG
+//                    ).show()
+//                }
+//
+//                Log.d("GTFS_REALTIME", "━━━━━━━━━━━━━━━━━━━━━━━━━━")
+//                Log.d("GTFS_REALTIME", "Total vehicles: ${vehicles.size}")
+//
+//                vehicles.take(3).forEach { vehicle ->
+//                    Log.d("GTFS_REALTIME", "VRN: ${vehicle.vehicle?.label}") // VRN is usually in 'label' or 'license_plate'
+//                    Log.d("GTFS_REALTIME", "Lat: ${vehicle.position?.latitude}")
+//                    Log.d("GTFS_REALTIME", "Lng: ${vehicle.position?.longitude}")
+//                    Log.d("GTFS_REALTIME", "-----------------------------")
+//                }
+//
+//            } catch (e: Exception) {
+//                Log.e("GTFS_REALTIME", "CRASH: ${e.message}")
+//                e.printStackTrace()
+//            }
+//        }
+//    }
 }

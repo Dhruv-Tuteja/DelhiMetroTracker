@@ -1,10 +1,10 @@
-package com.metro.delhimetrotracker.ui.dashboard
+package com.metro.delhimetrotracker.dashboard
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.metro.delhimetrotracker.ui.MainActivity
+import com.metro.delhimetrotracker.MainActivity
 import android.widget.TextView
 import com.google.android.material.snackbar.Snackbar
 import android.widget.Toast
@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.metro.delhimetrotracker.MetroTrackerApplication
 import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.ScheduledTrip
-import com.metro.delhimetrotracker.receivers.ScheduledTripAlarmManager
+import com.metro.delhimetrotracker.ScheduledTripAlarmManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -104,27 +104,9 @@ class ScheduledTripsPageFragment : Fragment() {
 
         return trips.filter { trip ->
             if (trip.isRecurring) {
-                // For recurring trips: check if today is one of the recurring days
-                val days = trip.recurringDays?.split(",") ?: emptyList()
-                val dayString = when (currentDay) {
-                    Calendar.SUNDAY -> "SUN"
-                    Calendar.MONDAY -> "MON"
-                    Calendar.TUESDAY -> "TUE"
-                    Calendar.WEDNESDAY -> "WED"
-                    Calendar.THURSDAY -> "THU"
-                    Calendar.FRIDAY -> "FRI"
-                    Calendar.SATURDAY -> "SAT"
-                    else -> ""
-                }
-
-                // If today is a recurring day AND the time hasn't passed yet
-                if (dayString in days) {
-                    val tripMinutes = trip.scheduledTimeHour * 60 + trip.scheduledTimeMinute
-                    tripMinutes > currentMinutes
-                } else {
-                    // Show it anyway for upcoming days in the week
-                    true
-                }
+                // For recurring trips: always show them (they recur weekly)
+                // Just filter out if they're not active
+                trip.isActive
             } else {
                 // For one-time trips: check if scheduledDate is in the future
                 val tripDate = trip.scheduledDate ?: return@filter false
@@ -145,10 +127,27 @@ class ScheduledTripsPageFragment : Fragment() {
                         Calendar.SATURDAY -> "SAT"
                         else -> ""
                     }
-                    if (dayString in days) 0 else 1 // Today's recurring trips first
+                    val tripMinutes = trip.scheduledTimeHour * 60 + trip.scheduledTimeMinute
+                    // Prioritize: today's trips that haven't passed yet
+                    when (dayString) {
+                        in days if tripMinutes > currentMinutes -> {
+                            0 // Today, upcoming
+                        }
+                        in days -> {
+                            2 // Today, but passed
+                        }
+                        else -> {
+                            1 // Other days
+                        }
+                    }
                 } else {
                     val tripDate = trip.scheduledDate ?: Long.MAX_VALUE
-                    if (tripDate >= todayStart && tripDate < todayStart + 86400000) 0 else 1 // Today's trips first
+                    if (tripDate >= todayStart && tripDate < todayStart + 86400000) {
+                        val tripMinutes = trip.scheduledTimeHour * 60 + trip.scheduledTimeMinute
+                        if (tripMinutes > currentMinutes) 0 else 2 // Today's trips
+                    } else {
+                        1 // Future trips
+                    }
                 }
             },
             { it.scheduledTimeHour * 60 + it.scheduledTimeMinute }
@@ -157,7 +156,7 @@ class ScheduledTripsPageFragment : Fragment() {
 
     private fun deleteTripWithUndo(trip: ScheduledTrip) {
         // Call MainActivity's deleteScheduledTrip which handles sync
-        (requireActivity() as? com.metro.delhimetrotracker.ui.MainActivity)?.deleteScheduledTrip(trip.id)
+        (requireActivity() as? MainActivity)?.deleteScheduledTrip(trip.id)
 
         // Show Snackbar with Undo
         view?.let { v ->
@@ -180,7 +179,7 @@ class ScheduledTripsPageFragment : Fragment() {
                         ScheduledTripAlarmManager.scheduleTrip(requireContext(), restoredTrip)
 
                         // Sync the restoration to cloud
-                        (requireActivity() as? com.metro.delhimetrotracker.ui.MainActivity)?.performManualSync {}
+                        (requireActivity() as? MainActivity)?.performManualSync {}
 
                         Toast.makeText(context, "Trip restored", Toast.LENGTH_SHORT).show()
                     }

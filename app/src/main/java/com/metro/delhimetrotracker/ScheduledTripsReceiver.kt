@@ -1,4 +1,4 @@
-package com.metro.delhimetrotracker.receivers
+package com.metro.delhimetrotracker
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,11 +10,8 @@ import android.media.RingtoneManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.metro.delhimetrotracker.MetroTrackerApplication
-import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.ScheduledTrip
 import com.metro.delhimetrotracker.data.repository.MetroRepository
-import com.metro.delhimetrotracker.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -135,7 +132,7 @@ class ScheduledTripReceiver : BroadcastReceiver() {
         return try {
             val cleanTime = timeStr.trim()
             val parts = cleanTime.split(":")
-            var hours = parts[0].toInt()
+            val hours = parts[0].toInt()
             val minutes = parts[1].toInt()
 
             val amPm = if (hours >= 12) "PM" else "AM"
@@ -143,7 +140,7 @@ class ScheduledTripReceiver : BroadcastReceiver() {
             if (displayHour == 0) displayHour = 12
 
             String.format("%d:%02d %s", displayHour, minutes, amPm)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             timeStr
         }
     }

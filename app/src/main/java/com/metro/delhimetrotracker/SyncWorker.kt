@@ -1,20 +1,21 @@
-package com.metro.delhimetrotracker.worker
+package com.metro.delhimetrotracker
 
 import android.content.Context
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.metro.delhimetrotracker.MetroTrackerApplication
 import com.metro.delhimetrotracker.data.local.database.entities.Trip
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import java.util.Date
-import android.util.Log
 import com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod
 import com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint
 import com.metro.delhimetrotracker.data.local.database.AppDatabase
 import com.metro.delhimetrotracker.data.local.database.entities.TripStatus
+import java.util.Locale
+
 class SyncWorker(
     appContext: Context,
     workerParams: WorkerParameters
@@ -32,7 +33,7 @@ class SyncWorker(
             // 3. Refresh token if needed
             try {
                 auth.currentUser?.getIdToken(true)?.await()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 return Result.failure()
             }
 
@@ -71,7 +72,7 @@ class SyncWorker(
                         val tripMap = tripToFirestoreMap(trip, checkpointDataList)
 
                         // Format ID to 4 digits (0001, 0002)
-                        val formattedDocId = String.format(java.util.Locale.US, "%04d", trip.id)
+                        val formattedDocId = String.format(Locale.US, "%04d", trip.id)
 
                         firestore.collection("users")
                             .document(userId)
@@ -86,7 +87,7 @@ class SyncWorker(
                             newState = "SYNCED",
                             timestamp = System.currentTimeMillis()
                         )
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         db.tripDao().updateSyncStatus(
                             tripId = trip.id,
                             newState = "PENDING",
@@ -97,7 +98,7 @@ class SyncWorker(
             }
             pullFromFirestore(db, userId, firestore)
             Result.success()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Result.retry()
         }
     }
@@ -126,20 +127,20 @@ class SyncWorker(
                 // Trip is deleted in cloud
                 if (localTrip != null && !localTrip.isDeleted && localTrip.lastModified > cloudLastModified) {
                     // ✅ Local version is RESTORED and NEWER - keep it and skip cloud update
-                    android.util.Log.d("SYNC_CONFLICT", "Trip $tripId: Local restoration is newer, keeping local version")
+                    Log.d("SYNC_CONFLICT", "Trip $tripId: Local restoration is newer, keeping local version")
                     continue
                 } else {
                     // Cloud deletion is authoritative
                     db.tripDao().markTripAsDeleted(tripId)
                     db.stationCheckpointDao().deleteCheckpointsByTrip(tripId)
-                    android.util.Log.d("SYNC_DELETE", "Trip $tripId deleted from cloud, marked as deleted locally")
+                    Log.d("SYNC_DELETE", "Trip $tripId deleted from cloud, marked as deleted locally")
                     continue
                 }
             }
 
             // ✅ If local trip is deleted but cloud has it restored, respect cloud version
-            if (localTrip != null && localTrip.isDeleted && !isDeleted && cloudLastModified > localTrip.lastModified) {
-                android.util.Log.d("SYNC_RESTORE", "Trip $tripId: Cloud restoration is newer, restoring from cloud")
+            if (localTrip != null && localTrip.isDeleted && cloudLastModified > localTrip.lastModified) {
+                Log.d("SYNC_RESTORE", "Trip $tripId: Cloud restoration is newer, restoring from cloud")
                 // Continue to restore the trip below
             }
 
@@ -215,7 +216,7 @@ class SyncWorker(
 //                )
 //            }
 
-            android.util.Log.d(
+            Log.d(
                 "SYNC_REBUILD",
                 "Trip $tripId → stations=${orderedStations.size}, checkpoints=${checkpointsRaw.size}"
             )

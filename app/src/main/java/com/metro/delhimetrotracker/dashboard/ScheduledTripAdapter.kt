@@ -1,5 +1,6 @@
-package com.metro.delhimetrotracker.ui.dashboard
+package com.metro.delhimetrotracker.dashboard
 
+import android.annotation.SuppressLint
 import android.graphics.Canvas
 import android.view.GestureDetector
 import android.view.LayoutInflater
@@ -10,13 +11,14 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.card.MaterialCardView
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.ScheduledTrip
 import it.xabaras.android.recyclerview.swipedecorator.RecyclerViewSwipeDecorator
+import androidx.core.graphics.toColorInt
 
+@Suppress("DEPRECATION")
 class ScheduledTripAdapter(
     private val onDoubleTap: (ScheduledTrip) -> Unit,
     private val onDelete: (ScheduledTrip) -> Unit
@@ -24,11 +26,13 @@ class ScheduledTripAdapter(
 
     private var trips: List<Pair<ScheduledTrip, List<String>>> = emptyList()
 
+    @SuppressLint("NotifyDataSetChanged")
     fun setTrips(scheduledTrips: List<ScheduledTrip>) {
         this.trips = scheduledTrips.map { it to emptyList() } // Default empty colors
         notifyDataSetChanged()
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun setTripsWithColors(tripsWithColors: List<Pair<ScheduledTrip, List<String>>>) {
         this.trips = tripsWithColors
         notifyDataSetChanged()
@@ -53,6 +57,7 @@ class ScheduledTripAdapter(
         private val tvType: TextView = itemView.findViewById(R.id.tvScheduleType)
         private val tvReminder: TextView = itemView.findViewById(R.id.tvReminderInfo)
 
+        @SuppressLint("DefaultLocale", "SetTextI18n", "ClickableViewAccessibility")
         fun bind(trip: ScheduledTrip, lineColors: List<String>) {
             val hour12 = if (trip.scheduledTimeHour % 12 == 0) 12 else trip.scheduledTimeHour % 12
             val amPm = if (trip.scheduledTimeHour >= 12) "PM" else "AM"
@@ -109,8 +114,8 @@ class ScheduledTripAdapter(
 
         private fun parseColor(colorString: String): Int {
             return try {
-                Color.parseColor(colorString)
-            } catch (e: Exception) {
+                colorString.toColorInt()
+            } catch (_: Exception) {
                 Color.GRAY
             }
         }

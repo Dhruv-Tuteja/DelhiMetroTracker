@@ -1,31 +1,12 @@
 package com.metro.delhimetrotracker.data.repository
 
 import android.content.Context
-import androidx.room.Room
 import com.metro.delhimetrotracker.data.local.database.AppDatabase
 import com.metro.delhimetrotracker.data.local.database.entities.MetroStation
 import org.json.JSONObject
 import java.util.UUID
 
 object DatabaseInitializer {
-
-    // 1. Singleton Pattern (Fixes 'Unresolved reference getDatabase')
-    @Volatile
-    private var INSTANCE: AppDatabase? = null
-
-    fun getDatabase(context: Context): AppDatabase {
-        return INSTANCE ?: synchronized(this) {
-            val instance = Room.databaseBuilder(
-                context.applicationContext,
-                AppDatabase::class.java,
-                "delhi_metro_db"
-            )
-                .fallbackToDestructiveMigration() // Handles version change safely
-                .build()
-            INSTANCE = instance
-            instance
-        }
-    }
 
     // 2. Initializer with GTFS Support (Fixes 'missing gtfs_stations')
     suspend fun initializeStations(context: Context, db: AppDatabase) {

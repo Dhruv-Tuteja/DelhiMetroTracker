@@ -23,7 +23,7 @@ class Converters {
         return try {
             val listType = object : TypeToken<ArrayList<String>>() {}.type
             gson.fromJson(value, listType) ?: emptyList()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }

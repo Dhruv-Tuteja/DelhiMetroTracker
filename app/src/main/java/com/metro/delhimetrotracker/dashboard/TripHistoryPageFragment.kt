@@ -1,5 +1,6 @@
-package com.metro.delhimetrotracker.ui.dashboard
+package com.metro.delhimetrotracker.dashboard
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,14 +17,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.metro.delhimetrotracker.data.model.DashboardUiState
 import android.graphics.Canvas
+import android.util.Log
 import androidx.recyclerview.widget.ItemTouchHelper
 import com.google.android.material.snackbar.Snackbar
-import android.widget.Toast
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import com.metro.delhimetrotracker.MetroTrackerApplication
+import com.metro.delhimetrotracker.MainActivity
 import it.xabaras.android.recyclerview.swipedecorator.RecyclerViewSwipeDecorator
 
+@Suppress("DEPRECATION")
 class TripHistoryPageFragment : Fragment(), TripHistoryAdapter.OnTripDoubleTapListener {
 
     private lateinit var viewModel: DashboardViewModel
@@ -37,6 +37,7 @@ class TripHistoryPageFragment : Fragment(), TripHistoryAdapter.OnTripDoubleTapLi
         return inflater.inflate(R.layout.fragment_trip_history_page, container, false)
     }
 
+    @SuppressLint("CutPasteId")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -55,7 +56,7 @@ class TripHistoryPageFragment : Fragment(), TripHistoryAdapter.OnTripDoubleTapLi
                 if (state is DashboardUiState.Success) {
 
                     val trips = state.recentTrips   // 👈 single source of truth
-                    android.util.Log.d(
+                    Log.d(
                         "UI_VERIFY",
                         "Trips=${trips.size}, firstStations=${trips.firstOrNull()?.stationCount}"
                     )
@@ -130,14 +131,14 @@ class TripHistoryPageFragment : Fragment(), TripHistoryAdapter.OnTripDoubleTapLi
 
     private fun deleteTripWithUndo(trip: TripCardData) {
         // Call MainActivity's deleteTrip which handles sync
-        (requireActivity() as? com.metro.delhimetrotracker.ui.MainActivity)?.deleteTrip(trip.tripId)
+        (requireActivity() as? MainActivity)?.deleteTrip(trip.tripId)
 
         // Show Snackbar with Undo
         view?.let { v ->
             Snackbar.make(v, "Trip deleted", Snackbar.LENGTH_LONG)
                 .setAction("UNDO") {
                     // ✅ Use MainActivity's restoreTrip for proper cloud sync
-                    (requireActivity() as? com.metro.delhimetrotracker.ui.MainActivity)?.restoreTrip(trip.tripId) {
+                    (requireActivity() as? MainActivity)?.restoreTrip(trip.tripId) {
                         // Trip restored and synced successfully
                     }
                 }

@@ -20,34 +20,15 @@
             android:padding="16dp">
 
             <!-- Header -->
-            <RelativeLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvDashboardTitle"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp">
-
-                <TextView
-                    android:id="@+id/tvDashboardTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentStart="true"
-                    android:layout_centerVertical="true"
-                    android:layout_toStartOf="@id/btnCloseDashboard"
-                    android:text="Travel Dashboard"
-                    android:textSize="32sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface" />
-
-                <ImageButton
-                    android:id="@+id/btnCloseDashboard"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_close"
-                    android:contentDescription="Close Dashboard"
-                    app:tint="?attr/colorOnSurface" />
-            </RelativeLayout>
+                android:layout_marginBottom="8dp"
+                android:text="Travel Dashboard"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
 
             <!-- Stats Card -->
             <com.google.android.material.card.MaterialCardView
@@ -181,14 +162,14 @@
                                 android:textStyle="bold"
                                 android:textColor="?attr/colorOnSurface"
                                 android:layout_marginTop="4dp" />
-<!--                            <com.google.android.material.progressindicator.LinearProgressIndicator-->
-<!--                                android:id="@+id/progressStations"-->
-<!--                                android:layout_width="match_parent"-->
-<!--                                android:layout_height="wrap_content"-->
-<!--                                android:layout_marginTop="8dp"-->
-<!--                                app:indicatorColor="?attr/colorPrimary"-->
-<!--                                app:trackColor="?attr/colorSurfaceContainer"-->
-<!--                                app:trackCornerRadius="4dp" />-->
+                            <!--                            <com.google.android.material.progressindicator.LinearProgressIndicator-->
+                            <!--                                android:id="@+id/progressStations"-->
+                            <!--                                android:layout_width="match_parent"-->
+                            <!--                                android:layout_height="wrap_content"-->
+                            <!--                                android:layout_marginTop="8dp"-->
+                            <!--                                app:indicatorColor="?attr/colorPrimary"-->
+                            <!--                                app:trackColor="?attr/colorSurfaceContainer"-->
+                            <!--                                app:trackCornerRadius="4dp" />-->
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>

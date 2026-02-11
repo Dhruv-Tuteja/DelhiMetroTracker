@@ -7,9 +7,6 @@ import com.metro.delhimetrotracker.data.repository.DatabaseInitializer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 
 class MetroTrackerApplication : Application() {
 

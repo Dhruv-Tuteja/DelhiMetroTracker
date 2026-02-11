@@ -179,7 +179,7 @@ class RoutePlanner(private val database: AppDatabase) {
         val segments = mutableListOf<RouteSegment>()
         var currentLine = deduped.first().metroLine
         var currentColor = deduped.first().lineColor
-        var buffer = mutableListOf<MetroStation>()
+        val buffer = mutableListOf<MetroStation>()
 
         deduped.forEach { station ->
             if (station.metroLine != currentLine) {

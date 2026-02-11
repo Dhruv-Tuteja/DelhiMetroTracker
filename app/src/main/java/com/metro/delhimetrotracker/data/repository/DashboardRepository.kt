@@ -15,29 +15,20 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOf
 import java.util.Calendar
 import com.metro.delhimetrotracker.data.local.database.entities.StationCheckpoint
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DashboardRepository(private val database: AppDatabase) {
 
     private val tripDao = database.tripDao()
-    private val stationDao = database.metroStationDao()
     private val scheduledTripDao = database.scheduledTripDao()
 
     private val stationCheckpointDao =  database.stationCheckpointDao() // 1. Inject this DAO
 
-    suspend fun deleteTrip(tripId: Long) {
-        tripDao.markTripAsDeleted(tripId)
-    }
-    suspend fun restoreTrip(tripId: Long) {
-        tripDao.restoreTrip(tripId)
-    }
     fun getAllScheduledTrips(): Flow<List<ScheduledTrip>> {
         return database.scheduledTripDao().getAllActiveScheduledTrips()
     }
-    suspend fun getAllStationNames(): List<String> {
-        return stationDao.getAllStations().map { it.stationName }.sorted()
-    }
-
     // --- ADDED: Scheduled Trips for the 2nd Tab ---
     fun getScheduledTrips(): Flow<List<ScheduledTrip>> {
         return scheduledTripDao.getAllActiveScheduledTrips()

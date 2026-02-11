@@ -24,25 +24,24 @@ import java.util.*
 import com.metro.delhimetrotracker.data.local.database.entities.DetectionMethod.MANUAL
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
-import com.metro.delhimetrotracker.ui.TrackingActivity
-import com.metro.delhimetrotracker.data.model.TripCardData
+import com.metro.delhimetrotracker.TrackingActivity
 import android.widget.Toast
 import android.Manifest
 import com.metro.delhimetrotracker.data.repository.RoutePlanner
-import com.metro.delhimetrotracker.ui.MainActivity
-// Add these imports at the top of JourneyTrackingService.kt
+import com.metro.delhimetrotracker.MainActivity
 import androidx.work.*
-import com.metro.delhimetrotracker.worker.SyncWorker
+import com.metro.delhimetrotracker.SyncWorker
 import java.util.concurrent.TimeUnit
 import org.json.JSONArray
 import kotlinx.coroutines.flow.firstOrNull
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
+import androidx.core.content.edit
+import androidx.core.net.toUri
 
 /**
  * Production Foreground service for Delhi Metro Tracking.
  * Uses LifecycleService to provide easy access to lifecycleScope for DB operations.
  */
+@Suppress("SameParameterValue")
 class JourneyTrackingService : LifecycleService() {
 
     private lateinit var database: AppDatabase
@@ -84,7 +83,7 @@ class JourneyTrackingService : LifecycleService() {
     }
 
     fun shouldAutoSync(context: Context): Boolean {
-        val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("settings", MODE_PRIVATE)
         return prefs.getBoolean("auto_sync", true)
     }
 
@@ -96,11 +95,11 @@ class JourneyTrackingService : LifecycleService() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val manager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val manager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
             manager.defaultVibrator
         } else {
             @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            getSystemService(VIBRATOR_SERVICE) as Vibrator
         }
         createNotificationChannel()
 
@@ -115,7 +114,7 @@ class JourneyTrackingService : LifecycleService() {
         super.onDestroy()
         try {
             unregisterReceiver(powerButtonReceiver)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Receiver not registered
         }
     }
@@ -138,7 +137,7 @@ class JourneyTrackingService : LifecycleService() {
                 val preferenceString = intent.getStringExtra("ROUTE_PREFERENCE")
                 routePreference = try {
                     RoutePlanner.RoutePreference.valueOf(preferenceString ?: "SHORTEST_PATH")
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     RoutePlanner.RoutePreference.SHORTEST_PATH
                 }
 
@@ -218,9 +217,9 @@ class JourneyTrackingService : LifecycleService() {
     }
     private fun setTripActive(active: Boolean) {
         getSharedPreferences("trip_state", MODE_PRIVATE)
-            .edit()
-            .putBoolean("is_trip_active", active)
-            .apply()
+            .edit {
+                putBoolean("is_trip_active", active)
+            }
     }
 
 
@@ -281,7 +280,7 @@ class JourneyTrackingService : LifecycleService() {
 
 
                 withContext(Dispatchers.Main) {
-                    updateNotification("Jumped to: ${targetStation.stationName}")
+                    updateNotification()
                 }
 
                 if(currentStationIndex >= stationRoute.size) {
@@ -409,7 +408,7 @@ Battery: $batteryText
 
                 // 6️⃣ Update notification
                 withContext(Dispatchers.Main) {
-                    updateNotification("Current: $reachedStation")
+                    updateNotification()
                 }
 
                 // 7️⃣ End journey if destination reached
@@ -430,11 +429,11 @@ Battery: $batteryText
         // FIXED: Added permission check
         if (ActivityCompat.checkSelfPermission(
                 this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED &&
             ActivityCompat.checkSelfPermission(
                 this,
-                android.Manifest.permission.ACCESS_COARSE_LOCATION
+                Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             Log.e(TAG, "Location permission not granted")
@@ -448,20 +447,6 @@ Battery: $batteryText
             fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
         } catch (e: SecurityException) {
             Log.e(TAG, "Permission error", e)
-        }
-    }
-    // Inside JourneyTrackingService.kt
-
-    private fun subscribeToLocationUpdates() {
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L).build()
-
-        // ADD THE PERMISSION CHECK HERE
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
-        } else {
-            // Fallback if permission was revoked while service was running
-            Log.e("JourneyService", "Location permission not granted")
-            stopSelf()
         }
     }
 
@@ -590,7 +575,6 @@ Battery: $batteryText
         val totalStations = if (stationRoute.isNotEmpty()) stationRoute.size else 0
         val stationsDone = currentStationIndex.coerceIn(0, totalStations)
 
-        val progress = if (totalStations > 1) stationsDone else 0
         val upcomingStation = stationRoute.getOrNull(currentStationIndex)?.stationName
             ?: currentTrip?.destinationStationName
             ?: "Destination"
@@ -632,7 +616,7 @@ Battery: $batteryText
         }
     }
 
-    private fun updateNotification(status: String) {
+    private fun updateNotification() {
         val notification = createNotification() // Re-creates with latest currentTrip info
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
     }
@@ -674,13 +658,10 @@ Battery: $batteryText
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             // Android 12 (API 31) and above
             location.isMock
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+        } else
             // API 18-30
             @Suppress("DEPRECATION")
             location.isFromMockProvider
-        } else {
-            false
-        }
     }
 
     private fun handleMockLocationDetected() {
@@ -932,7 +913,7 @@ Please check immediately.
                         ) == PackageManager.PERMISSION_GRANTED
                     ) {
                         val callIntent = Intent(Intent.ACTION_CALL).apply {
-                            data = android.net.Uri.parse("tel:$emergencyContact")
+                            data = "tel:$emergencyContact".toUri()
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         }
                         startActivity(callIntent)
@@ -947,7 +928,7 @@ Please check immediately.
                 // ===============================
                 // 🔴 STEP 3: UPDATE NOTIFICATION
                 // ===============================
-                updateNotification("🆘 AUTO-SOS SENT")
+                updateNotification()
 
                 // ===============================
                 // 🔴 STEP 4: STRONG VIBRATION

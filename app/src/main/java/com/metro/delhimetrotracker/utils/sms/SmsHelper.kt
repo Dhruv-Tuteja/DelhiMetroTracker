@@ -1,6 +1,7 @@
 package com.metro.delhimetrotracker.utils.sms
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -17,7 +18,7 @@ class SmsHelper(private val context: Context) {
     companion object {
         private const val TAG = "SmsHelper"
         const val ACTION_SMS_SENT = "SMS_SENT"
-        const val ACTION_SMS_DELIVERED = "SMS_DELIVERED"
+        @SuppressLint("ConstantLocale")
         private val dateFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
     }
 
@@ -43,33 +44,6 @@ class SmsHelper(private val context: Context) {
     }
 
     /**
-     * Formats and sends a station-reached update.
-     */
-    fun sendStationAlert(
-        phoneNumber: String,
-        stationName: String,
-        stationOrder: Int,
-        totalStations: Int,
-        nextStationName: String?,
-        isDestination: Boolean = false
-    ): Boolean {
-        if (phoneNumber.isBlank()) return false
-        return try {
-            val time = dateFormat.format(Date())
-            val message = if (isDestination) {
-                "🎯 Destination Reached!\nStation: $stationName\nTime: $time"
-            } else {
-                "📍 Station Update ($stationOrder/$totalStations)\nCurrent: $stationName\nTime: $time${nextStationName?.let { "\nNext: $it" } ?: ""}"
-            }
-            sendSmsInternal(phoneNumber, message)
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to send station alert", e)
-            false
-        }
-    }
-
-    /**
      * Sends a notification when the journey officially begins.
      */
     fun sendJourneyStartAlert(
@@ -84,7 +58,7 @@ class SmsHelper(private val context: Context) {
         return try {
             sendSmsInternal(phoneNumber, message)
             true
-        } catch (e: Exception) { false }
+        } catch (_: Exception) { false }
     }
 
     /**

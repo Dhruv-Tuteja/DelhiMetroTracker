@@ -1,7 +1,9 @@
-package com.metro.delhimetrotracker.ui.dashboard
+package com.metro.delhimetrotracker.dashboard
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,8 +18,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.view.GestureDetector
 import android.view.MotionEvent
-import android.util.TypedValue
 import com.google.android.material.card.MaterialCardView
+import androidx.core.graphics.toColorInt
 
 
 class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener) : ListAdapter<TripCardData, TripHistoryAdapter.TripViewHolder>(TripDiffCallback()) {
@@ -45,6 +47,7 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
 
         private val dateFormat = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
 
+        @SuppressLint("SetTextI18n", "ClickableViewAccessibility")
         fun bind(trip: TripCardData) {
             itemView.alpha = 1.0f
             itemView.translationX = 0f
@@ -53,11 +56,11 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
             val card = itemView as MaterialCardView
 
             if (trip.hadSosAlert == true) {
-                card.setCardBackgroundColor(Color.parseColor("#4D1F1F")) // Dark red tint
+                card.setCardBackgroundColor("#4D1F1F".toColorInt()) // Dark red tint
                 itemView.findViewById<View>(R.id.sosIndicator)?.visibility = View.VISIBLE
             } else {
                 // Use theme attribute instead of hardcoded color for light/dark mode support
-                val typedValue = android.util.TypedValue()
+                val typedValue = TypedValue()
                 itemView.context.theme.resolveAttribute(
                     com.google.android.material.R.attr.colorSurfaceVariant,
                     typedValue,
@@ -136,8 +139,8 @@ class TripHistoryAdapter(private val doubleTapListener: OnTripDoubleTapListener)
 
         private fun parseColor(colorString: String): Int {
             return try {
-                Color.parseColor(colorString)
-            } catch (e: Exception) {
+                colorString.toColorInt()
+            } catch (_: Exception) {
                 Color.GRAY
             }
         }

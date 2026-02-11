@@ -35,7 +35,6 @@ data class TripCardData(
     val sosTimestamp: Long? = null
 ) {
     val isDelayed: Boolean get() = delayMinutes > 5
-    val isSingleLine: Boolean get() = lineColors.size == 1
 }
 
 /**
@@ -63,22 +62,4 @@ sealed class DashboardUiState {
         val recentTrips: List<TripCardData>
     ) : DashboardUiState()
     data class Error(val message: String) : DashboardUiState()
-}
-
-/**
- * Fun contextual messages based on travel time
- */
-object TravelTimeContext {
-    fun getContextMessage(totalMinutes: Int): String {
-        val hours = totalMinutes / 60.0
-        return when {
-            hours < 1 -> "Just getting started! 🚇"
-            hours < 5 -> "Equivalent to watching 2 episodes of your favorite show"
-            hours < 10 -> "That's a full workday on the Metro!"
-            hours < 24 -> "You've spent a full day exploring Delhi!"
-            hours < 50 -> "Enough time to binge-watch Demon Slayer twice! 📺"
-            hours < 100 -> "You could've watched the entire Harry Potter series!"
-            else -> "You're a true Metro veteran! 🏆"
-        }
-    }
 }

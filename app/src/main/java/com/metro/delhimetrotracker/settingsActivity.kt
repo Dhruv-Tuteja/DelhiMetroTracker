@@ -1,5 +1,6 @@
-package com.metro.delhimetrotracker.ui
+package com.metro.delhimetrotracker
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -14,11 +15,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.metro.delhimetrotracker.MetroTrackerApplication
-import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.UserSettings
 import com.metro.delhimetrotracker.utils.TripHistoryExporter
 import kotlinx.coroutines.Dispatchers
@@ -26,15 +23,16 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.util.Log
+import android.view.View
+import android.widget.TextView
 import androidx.core.content.FileProvider
+import com.google.android.material.appbar.MaterialToolbar
 import java.io.FileOutputStream
 import java.io.File
-import android.content.res.ColorStateList
 
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var currentSettings: UserSettings
-    private var currentDialogPhoneField: TextInputEditText? = null
 
     // Contact picker launcher
     private val contactPickerLauncher = registerForActivityResult(ActivityResultContracts.PickContact()) { uri ->
@@ -51,7 +49,7 @@ class SettingsActivity : AppCompatActivity() {
                     phones?.moveToFirst()
                     val rawNumber = phones?.getString(phones.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER))
                     val cleanedNumber = extractIndianMobileNumber(rawNumber)
-                    if (!cleanedNumber.isNullOrEmpty() && cleanedNumber.length == 10) {
+                    if (cleanedNumber.isNotEmpty() && cleanedNumber.length == 10) {
                         saveEmergencyContact(cleanedNumber)
                     } else {
                         Toast.makeText(
@@ -73,7 +71,7 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         // Set up toolbar
-        findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbarSettings).apply {
+        findViewById<MaterialToolbar>(R.id.toolbarSettings).apply {
             setNavigationOnClickListener { finish() }
         }
 
@@ -136,10 +134,10 @@ class SettingsActivity : AppCompatActivity() {
                 getSharedPreferences("settings", MODE_PRIVATE).edit {
                     putBoolean("sos_enabled", isChecked)
                 }
-                cardSosAdvanced.visibility = if (isChecked) android.view.View.VISIBLE else android.view.View.GONE
+                cardSosAdvanced.visibility = if (isChecked) View.VISIBLE else View.GONE
             }
         }
-        cardSosAdvanced.visibility = if (switchSosEnabled.isChecked) android.view.View.VISIBLE else android.view.View.GONE
+        cardSosAdvanced.visibility = if (switchSosEnabled.isChecked) View.VISIBLE else View.GONE
 
         val switchAutoSos = findViewById<SwitchMaterial>(R.id.switchAutoSos)
         switchAutoSos.isChecked = getSharedPreferences("settings", MODE_PRIVATE)
@@ -228,8 +226,9 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateEmergencyContactDisplay(phone: String?) {
-        val tvEmergencyContactValue = findViewById<android.widget.TextView>(R.id.tvEmergencyContactValue)
+        val tvEmergencyContactValue = findViewById<TextView>(R.id.tvEmergencyContactValue)
         if (phone.isNullOrEmpty()) {
             tvEmergencyContactValue.text = "Not set"
             tvEmergencyContactValue.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary))
@@ -276,7 +275,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun updateReminderTimeDisplay() {
-        val tvReminderValue = findViewById<android.widget.TextView>(R.id.tvReminderValue)
+        val tvReminderValue = findViewById<TextView>(R.id.tvReminderValue)
         val minutes = getSharedPreferences("settings", MODE_PRIVATE)
             .getInt("default_reminder_minutes", 30)
 
@@ -331,7 +330,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun updateAutoDeleteDisplay() {
-        val tvAutoDeleteValue = findViewById<android.widget.TextView>(R.id.tvAutoDeleteValue)
+        val tvAutoDeleteValue = findViewById<TextView>(R.id.tvAutoDeleteValue)
         val days = getSharedPreferences("settings", MODE_PRIVATE)
             .getInt("auto_delete_days", 0)
 
@@ -397,7 +396,7 @@ class SettingsActivity : AppCompatActivity() {
 
         try {
             startActivity(Intent.createChooser(intent, "Open Metro Map"))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(
                 this,
                 "No PDF viewer installed",

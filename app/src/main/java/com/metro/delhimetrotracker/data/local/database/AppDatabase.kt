@@ -4,40 +4,38 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
-import com.metro.delhimetrotracker.data.local.database.converters.Converters
 import com.metro.delhimetrotracker.data.local.database.dao.*
 import com.metro.delhimetrotracker.data.local.database.entities.*
-// Add this to your AppDatabase.kt or wherever you define your Room database
 
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-// Migration from version 1 to version 2 (adding sync fields)
 val MIGRATION_1_2 = object : Migration(1, 2) {
-    override fun migrate(database: SupportSQLiteDatabase) {
+    override fun migrate(db: SupportSQLiteDatabase) {
         // Add new sync-related columns with default values
-        database.execSQL("""
+        db.execSQL(
+            """
             ALTER TABLE trips 
             ADD COLUMN syncState TEXT NOT NULL DEFAULT 'PENDING'
-        """)
+        """,
+        )
 
-        database.execSQL("""
+        db.execSQL("""
             ALTER TABLE trips 
             ADD COLUMN deviceId TEXT NOT NULL DEFAULT ''
         """)
 
-        database.execSQL("""
+        db.execSQL("""
             ALTER TABLE trips 
             ADD COLUMN lastModified INTEGER NOT NULL DEFAULT 0
         """)
 
-        database.execSQL("""
+        db.execSQL("""
             ALTER TABLE trips 
             ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0
         """)
 
-        database.execSQL("""
+        db.execSQL("""
             ALTER TABLE trips 
             ADD COLUMN schemaVersion INTEGER NOT NULL DEFAULT 1
         """)

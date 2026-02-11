@@ -1,26 +1,18 @@
-package com.metro.delhimetrotracker.ui
+package com.metro.delhimetrotracker
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.metro.delhimetrotracker.R
 import com.metro.delhimetrotracker.data.local.database.entities.ScheduledTrip
 
 class ScheduledTripAdapter(
-    private val onStartClick: (ScheduledTrip) -> Unit, // Clicking the card starts the trip
-    private val onEdit: (ScheduledTrip) -> Unit,       // Clicking "Edit" button
-    private val onDelete: (ScheduledTrip) -> Unit      // Clicking "Delete" button
+    private val onStartClick: (ScheduledTrip) -> Unit,
 ) : RecyclerView.Adapter<ScheduledTripAdapter.ViewHolder>() {
 
     private var trips = listOf<ScheduledTrip>()
-
-    fun submitList(newTrips: List<ScheduledTrip>) {
-        trips = newTrips
-        notifyDataSetChanged()
-    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -28,6 +20,7 @@ class ScheduledTripAdapter(
         return ViewHolder(view)
     }
 
+    @SuppressLint("DefaultLocale", "SetTextI18n")
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val trip = trips[position]
 
