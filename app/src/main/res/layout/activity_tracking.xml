@@ -228,7 +228,8 @@
         app:cardCornerRadius="20dp"
         app:cardElevation="2dp">
 
-        <androidx.recyclerview.widget.RecyclerView
+        <!-- CHANGED: Use AutoCenterRecyclerView instead of RecyclerView -->
+        <com.metro.delhimetrotracker.AutoCenterRecyclerView
             android:id="@+id/rvStationPath"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

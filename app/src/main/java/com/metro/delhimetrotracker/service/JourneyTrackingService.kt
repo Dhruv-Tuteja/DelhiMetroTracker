@@ -308,10 +308,10 @@ class JourneyTrackingService : LifecycleService() {
                 lastLatitude = currentLocation.latitude
                 lastLongitude = currentLocation.longitude
 
-                // 1️⃣ Build candidate stations (max 4 ahead)
+                // 1️⃣ Build candidate stations (max 6 ahead)
                 val candidates = stationRoute
                     .drop(currentStationIndex)
-                    .take(4)
+                    .take(6)
                     .ifEmpty { return@launch }
 
                 var bestMatch: MetroStation? = null
@@ -392,14 +392,12 @@ class JourneyTrackingService : LifecycleService() {
 
                 val smsMessage = """
 🚉 Metro Update
-
 Reached: $reachedStation
 Next: $upcomingStation
 Stations left: $stationsLeft
 Battery: $batteryText
-
 - Delhi Metro Tracker
-            """.trimIndent()
+        """.trimIndent()
 
                 // 5️⃣ Send SMS (if enabled)
                 if (trip.emergencyContact.isNotEmpty() && isSmsEnabled()) {
@@ -409,6 +407,11 @@ Battery: $batteryText
                 // 6️⃣ Update notification
                 withContext(Dispatchers.Main) {
                     updateNotification()
+
+                    // Trigger vibration only for last or second-last station
+                    if (bestIndex == stationRoute.size - 1 || bestIndex == stationRoute.size - 2) {
+                        triggerVibration()
+                    }
                 }
 
                 // 7️⃣ End journey if destination reached

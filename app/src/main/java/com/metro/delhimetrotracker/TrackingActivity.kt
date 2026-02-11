@@ -28,7 +28,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -123,7 +122,7 @@ class TrackingActivity : AppCompatActivity() {
 
         // Ensure these IDs match your XML exactly
         val rootLayout = findViewById<ConstraintLayout>(R.id.trackingRoot) ?: findViewById(android.R.id.content)
-        val rvPath = findViewById<RecyclerView>(R.id.rvStationPath)
+        val rvPath = findViewById<AutoCenterRecyclerView>(R.id.rvStationPath)
         progressIndicator = findViewById(R.id.journeyProgress)
 
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { v, insets ->
@@ -244,6 +243,28 @@ class TrackingActivity : AppCompatActivity() {
                     }
 
                     adapter.submitData(currentJourneyPath, activeTrip.visitedStations)
+
+                    val visitedSet = activeTrip.visitedStations.toSet()
+
+                    val upcomingStationIndex = currentJourneyPath.indexOfFirst { station ->
+                        val isVisited = visitedSet.contains(station.stationId)
+                        val position = currentJourneyPath.indexOf(station)
+
+                        // Upcoming = not visited AND (first OR previous is visited)
+                        !isVisited && (position == 0 || visitedSet.contains(currentJourneyPath[position - 1].stationId))
+                    }
+
+                    Log.d("TrackingUX", "Upcoming station index = $upcomingStationIndex")
+
+                    if (upcomingStationIndex >= 0) {
+                        rvPath.setUpcomingStationPosition(upcomingStationIndex)
+
+                        // 🔒 STABLE ANCHOR BEHAVIOR (NOT RECENTERING)
+                        rvPath.post {
+                            rvPath.stabilizeUpcomingStation()
+                        }
+                    }
+
 
                     val currentId = activeTrip.visitedStations.lastOrNull()
                     if (currentId != null && activeTrip.visitedStations.size > 1) {

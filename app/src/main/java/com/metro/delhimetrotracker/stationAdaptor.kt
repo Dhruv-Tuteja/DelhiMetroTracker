@@ -116,16 +116,28 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
                 holder.tvName.setTextColor(colorOnSurface)
 
                 holder.nodeGlow.visibility = View.VISIBLE
-                holder.nodeGlow.background = createGlowDrawable(lineColorInt)
+                holder.nodeGlow.background =
+                    createGlowDrawable(adjustAlpha(lineColorInt, if (isDarkTheme(holder.itemView.context)) 0.4f else 0.25f))
+                holder.stationCard.strokeWidth = 5
+                holder.stationCard.strokeColor = adjustAlpha(lineColorInt, 0.9f)
+
 
                 holder.tvStatus.visibility = View.VISIBLE
                 holder.tvStatus.text = "UPCOMING"
                 holder.tvStatus.setTextColor(lineColorInt)
                 holder.tvStatus.background = createBadgeDrawable(adjustAlpha(lineColorInt, 0.15f))
 
-                holder.stationCard.setCardBackgroundColor(colorSurfaceVariant)
+                val upcomingBg = MaterialColors.getColor(
+                    holder.itemView,
+                    com.google.android.material.R.attr.colorPrimaryContainer
+                )
+
+                holder.stationCard.setCardBackgroundColor(colorSurface)
+                holder.stationCard.cardElevation = 10f
+
+
                 holder.stationCard.strokeColor = lineColorInt
-                holder.stationCard.strokeWidth = 6
+                holder.stationCard.strokeWidth = 5
 
                 // Show expected time for upcoming station
                 if (baseTimeForCalculation != null) {
@@ -140,6 +152,7 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
             isVisited -> {
                 // VISITED STATION - CLEARLY VISIBLE WITH BORDER
                 holder.tvName.setTextColor(colorOnSurfaceVariant)
+                holder.stationCard.cardElevation = 2f
 
                 holder.nodeGlow.visibility = View.INVISIBLE
 
@@ -180,6 +193,7 @@ class StationAdapter : RecyclerView.Adapter<StationAdapter.ViewHolder>() {
             else -> {
                 // FUTURE STATIONS - NORMAL APPEARANCE
                 holder.tvName.setTextColor(colorOnSurfaceVariant)
+                holder.stationCard.cardElevation = 2f
 
                 holder.nodeGlow.visibility = View.INVISIBLE
                 holder.tvStatus.visibility = View.GONE

@@ -16,6 +16,10 @@
     <color name="metro_default">#607D8B</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
+    <!-- res/values/colors.xml -->
+    <color name="upcoming_card_light">#FFF8E1</color> <!-- very light warm yellow -->
+    <color name="upcoming_card_dark">#2A2416</color> <!-- warm dark brown -->
+
 
     <!-- Accent Colors -->
     <color name="accent_blue">#64B5F6</color>
